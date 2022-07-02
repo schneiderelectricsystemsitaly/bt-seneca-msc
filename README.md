@@ -98,9 +98,12 @@ In all cases, the workflow is the same.
 ```
 ```
 * Call MSC.Execute() and verify the returned value
-** If another command is pending execution, Execute() will wait until completion-
-** The API will put the device in OFF state before writing the setpoint for safety, then apply the new mode settings.
-** For some functions, statistics reset command will be sent to the meter.
+
+If another command is pending execution, Execute() will wait until completion.
+
+The API will put the device in OFF state before writing the setpoint for safety, then apply the new mode settings.
+
+For some functions, statistics reset command will be sent to the meter.
 
 ### Various
 
