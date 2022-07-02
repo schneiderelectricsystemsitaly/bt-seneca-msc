@@ -1865,7 +1865,7 @@ async function refreshGeneration() {
  * */
 let btState = new APIState();
 
-module.exports = { MeterStop, MeterPair, MeterExecute, btState, CommandType, Command, Parse };
+module.exports = { MeterStop, MeterPair, MeterExecute, btState, CommandType, Command, Parse, log };
 },{"loglevel":1}]},{},[2])(2)
 });
 
