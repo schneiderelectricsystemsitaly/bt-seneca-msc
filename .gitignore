@@ -1,0 +1,4 @@
+.vs/
+*.bak
+docs/
+node_modules/
