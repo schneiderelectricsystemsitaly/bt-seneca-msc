@@ -305,11 +305,27 @@ const log = require("loglevel");
 /*
  * This file contains the public API of the meter, i.e. the functions designed
  * to be called from third party code.
- * 1- Pair
- * 2- Execute(Command)
- * 3- Stop()
+ * 1- Pair() : bool
+ * 2- Execute(Command) : bool
+ * 3- Stop() : bool
+ * 4- GetState() : array
  */
 
+/**
+ * Returns a copy of the current state
+ * @returns {array} status of meter
+ */
+function GetState() {
+    return {
+        "lastSetpoint" : btState.lastSetpoint,
+        "lastMeasure" : btState.lastMeasure,
+        "deviceName" : btState.btDevice?.name,
+        "deviceSerial" : btState.meter?.serial,
+        "stats" : btState.stats,
+        "deviceMode" : btState.meter?.mode,
+        "status" : btState.state
+    };
+}
 
 /**
  * External interface to require a command to be executed.
@@ -317,7 +333,7 @@ const log = require("loglevel");
  * This may fail if called outside a user gesture.
  * @param {Command} command
  */
-async function MeterExecute(command) {
+async function Execute(command) {
     log.info("Execute called...");
 
     if (command != null)
@@ -348,10 +364,9 @@ async function MeterExecute(command) {
 
 /**
  * MUST BE CALLED FROM A USER GESTURE EVENT HANDLER
- * NOT TESTED
- * @returns {boolean} true if meter is ready to execute command
+  * @returns {boolean} true if meter is ready to execute command
  * */
-async function MeterPair() {
+async function Pair() {
     log.info("Pair called...");
     if (!btState.started) {
         btState.state = State.NOT_CONNECTED;
@@ -368,7 +383,7 @@ async function MeterPair() {
 /**
  * Stops the state machine and disconnects bluetooth.
  * */
-async function MeterStop() {
+async function Stop() {
     log.info("Stop request received");
 
     btState.stopRequest = true;
@@ -378,6 +393,8 @@ async function MeterStop() {
     log.warn("Stopped on request.");
     return true;
 }
+
+/******************************** MODBUS STUFF ***********************************************/
 
 class ModbusError extends Error {
     /**
@@ -809,7 +826,7 @@ let waitFor = async function waitFor(f) {
     return f();
 };
 
-/*********************** MODBUS RTU FUNCTIONS **********************/
+/******************************* MODBUS RTU FUNCTIONS FOR SENECA **********************/
 
 /**
  * Generate the modbus RTU packet to read the serial number
@@ -1865,7 +1882,7 @@ async function refreshGeneration() {
  * */
 let btState = new APIState();
 
-module.exports = { MeterStop, MeterPair, MeterExecute, btState, CommandType, Command, Parse, log };
+module.exports = { Stop, Pair, Execute, GetState, State, CommandType, Command, Parse, log };
 },{"loglevel":1}]},{},[2])(2)
 });
 

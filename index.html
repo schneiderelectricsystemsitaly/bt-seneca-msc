@@ -125,12 +125,12 @@
     <script>
         document.getElementById("startBt").onclick = async () => {
             document.getElementById("resultPair").innerHTML = "Pending...";
-            var res = await MSC.MeterPair();
+            var res = await MSC.Pair();
             document.getElementById("resultPair").innerHTML = "Result : " + res;
         };
         document.getElementById("stopBt").onclick = async () => {
             document.getElementById("resultStop").innerHTML = "Pending...";
-            var res = await MSC.MeterStop();
+            var res = await MSC.Stop();
             document.getElementById("resultStop").innerHTML = "Result : " + res;
         };
         document.getElementById("testBtn").onclick = async () => {
@@ -161,18 +161,18 @@
             var setpoint = document.getElementById("new_command_sp").value;
             const comm = new MSC.Command(type, setpoint);
             document.getElementById("resultExecute").innerHTML = "Pending...";
-            var res = await MSC.MeterExecute(comm);
+            var res = await MSC.Execute(comm);
             document.getElementById("resultExecute").innerHTML = "Result : " + res;
         }
         function updateStatus() {
-            document.getElementById("status").innerHTML = MSC.btState.state;
-            document.getElementById("sp").innerHTML = dumpArray(MSC.btState.lastSetpoint);
-            document.getElementById("meas").innerHTML = dumpArray(MSC.btState.lastMeasure);
-            document.getElementById("btinfo").innerHTML = MSC.btState.btDevice?.name;
-            document.getElementById("serial").innerHTML = MSC.btState.meter.serial;
-            document.getElementById("mode").innerHTML = MSC.btState.meter.mode.toString() + " ("
-                + MSC.Parse(MSC.CommandType, MSC.btState.meter.mode) + ")";
-            document.getElementById("stats").innerHTML = dumpArray(MSC.btState.stats);
+            var mstate = MSC.GetState();
+            document.getElementById("status").innerHTML = mstate.status;
+            document.getElementById("sp").innerHTML = dumpArray(mstate.lastSetpoint);
+            document.getElementById("meas").innerHTML = dumpArray(mstate.lastMeasure);
+            document.getElementById("btinfo").innerHTML = mstate.deviceName;
+            document.getElementById("serial").innerHTML = mstate.deviceSerial;
+            document.getElementById("mode").innerHTML = mstate.deviceMode;
+            document.getElementById("stats").innerHTML = dumpArray(mstate.stats);
             setTimeout(updateStatus, 500);
         }
         setTimeout(updateStatus, 500);
@@ -188,7 +188,7 @@
             var idx = 0;
             while (true) {
                 var com = new MSC.Command(cycle[idx][0], cycle[idx][1]);
-                var result = await MSC.MeterExecute(com);
+                var result = await MSC.Execute(com);
                 log.info("** Result:" + result);
                 console.assert(result.error == false);
                 idx++;
