@@ -55,6 +55,19 @@ await MSC.MeterState(); // APIState - Get the current state
 
 ### Getting the current state of the meter
 
+* Behind the API, there is a state machine running every 750 ms. 
+* When the meter is measuring, measurement and error flag are refreshed at this rate (see: btState.lastMeasure). 
+* When the meter is generating, setpoint and error flag is read (see: btState.lastSetpoint).
+
+```
+MSC.btState.state           // State machine internal status (Ready,Busy,Pairing,...)
+MSC.btState.lastSetpoint    // Last executed generation function. Check for error flag. Element at position 0 is the setpoint.
+MSC.btState.lastMeasure     // Last measurement. Element at position 0 is the main measurement.
+MSC.btState.btDevice?.name; // Name of the bluetooth device paired
+MSC.btState.meter.serial;   // Serial number of the MSC device
+MSC.btState.meter.mode      // Current mode of the MSC device (see CommandType values)
+MSC.btState.stats           // Generic statistics, useful for debugging only.
+```
 
 ### Sending commands to the meter
 
