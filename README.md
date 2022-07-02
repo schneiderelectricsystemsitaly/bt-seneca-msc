@@ -38,16 +38,16 @@ libman install bt-seneca-msc --provider jsdelivr
 
 There are 4 operations available:
 ```
-await MSC.MeterPair(); // bool - Pair to bluetooth
-await MSC.MeterStop(); // bool - Disconnect the bluetooth and stops the polling
-await MSC.MeterExecute(MSC.Command); // bool - Execute command. If the device is not paired, an attempt will be made.
-await MSC.MeterState(); // APIState - Get the current state
+await MSC.Pair(); // bool - Pair to bluetooth
+await MSC.Stop(); // bool - Disconnect the bluetooth and stops the polling
+await MSC.Execute(MSC.Command); // bool - Execute command. If the device is not paired, an attempt will be made.
+await MSC.GetState(); // array - Get the current state
 ```
 ### Connecting to the meter
 
-* Call MSC.MeterPair() while handling a user gesture in the browser (i.e. button-click)
+* Call MSC.Pair() while handling a user gesture in the browser (i.e. button-click)
 ```
- var result = await MSC.MeterPair(); // true when connection has been established
+ var result = await MSC.Pair(); // true when connection has been established
 ```
 * A dialog will be shown to the user of devices with bluetooth name beginning with MSC
 * After pairing, the required bluetooth interfaces for Modbus RTU read and write will be established.
@@ -60,13 +60,14 @@ await MSC.MeterState(); // APIState - Get the current state
 * When the meter is generating, setpoint and error flag is read (see: btState.lastSetpoint).
 
 ```
-MSC.btState.state           // State machine internal status (Ready,Busy,Pairing,...)
-MSC.btState.lastSetpoint    // Last executed generation function. Check for error flag. Element at position 0 is the setpoint.
-MSC.btState.lastMeasure     // Last measurement. Element at position 0 is the main measurement.
-MSC.btState.btDevice?.name; // Name of the bluetooth device paired
-MSC.btState.meter.serial;   // Serial number of the MSC device
-MSC.btState.meter.mode      // Current mode of the MSC device (see CommandType values)
-MSC.btState.stats           // Generic statistics, useful for debugging only.
+var mstate = MSC.GetState();
+mstate.state           // State machine internal status (Ready,Busy,Pairing,...)
+mstate.lastSetpoint    // Last executed generation function. Check for error flag. Element at position 0 is the setpoint.
+mstate.lastMeasure     // Last measurement. Element at position 0 is the main measurement.
+mstate.deviceName     // Name of the bluetooth device paired
+mstate.deviceSerial   // Serial number of the MSC device
+mstate.deviceMode      // Current mode of the MSC device (see CommandType values)
+mstate.stats           // Generic statistics, useful for debugging only.
 ```
 
 ### Sending commands to the meter
@@ -79,8 +80,8 @@ In all cases, the workflow is the same.
 * Create a Command object
 ```
 ```
-* Call MSC.MeterExecute() and verify the returned value
-** If another command is pending execution, MeterExecute will wait until completion-
+* Call MSC.Execute() and verify the returned value
+** If another command is pending execution, Execute() will wait until completion-
 ** The API will put the device in OFF state before writing the setpoint for safety, then apply the new mode settings.
 ** For some functions, statistics reset command will be sent to the meter.
 
