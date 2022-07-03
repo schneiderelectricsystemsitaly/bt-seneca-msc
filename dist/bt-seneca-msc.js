@@ -1705,8 +1705,9 @@ function handleNotifications(event) {
 /**
  * This function will succeed only if called as a consequence of a user-gesture
  * E.g. button click. This is due to BlueTooth API security model.
+ * @param {boolean} forceSelection true to force the bluetooth device selection by user, false to use the one starting with MSC
  * */
-async function btPairDevice() {
+async function btPairDevice(forceSelection=true) {
     btState.state = State.CONNECTING;
 
     try {
@@ -1718,7 +1719,7 @@ async function btPairDevice() {
         var device = null;
 
         // Do we already have permission?
-        if (navigator.bluetooth.getDevices) { // Most browser do not support it
+        if (navigator.bluetooth.getDevices && !forceSelection) { 
             const availableDevices = await navigator.bluetooth.getDevices();
             availableDevices.forEach(function (dev, index) { if (dev.name.startsWith("MSC")) device = dev; });
         }

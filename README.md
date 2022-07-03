@@ -14,34 +14,34 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 
 | Measurements | Implementation | Data returned |
 | --- | --- | --- |
-| V, mV readings                | Done and tested           | Only Instantaneous, min, max values (no avg)  |
-| mA active/passive readings    | Done and tested           | Only Instantaneous, min, max values (no avg)  |
-| RTD readings                  | Done and tested 2W        | Instantaneous RTD °C and Ohms values          |
-| Thermocouples 2W/3W/4W read   | Done *not tested*         | Instantaneous °C value (no cold junction)     |
-| Frequency reading             | Done and tested           | Frequency of leading and falling edges        |
-| Pulse count reading           | Done and tested 0-10kHz   | Counts of leading and falling edges           |
-| Frequency reading             | Done and tested           | Tested with square wave 0-10 kHz              |
-| Load cell                     | Done *not tested*         | Imbalance mV/V                                |
+| V, mV readings                | Done and tested           | Only Instantaneous, min, max values (no avg) |
+| mA active/passive readings    | Done and tested           | Only Instantaneous, min, max values (no avg) |
+| RTD readings                  | Done and tested 2W        | Instantaneous RTD °C and Ohms values |
+| Thermocouples 2W/3W/4W read   | Done *not tested*         | Instantaneous °C value (no cold junction) |
+| Frequency reading             | Done and tested           | Frequency of leading and falling edges |
+| Pulse count reading           | Done and tested 0-10kHz   | Counts of leading and falling edges |
+| Frequency reading             | Done and tested           | Tested with square wave 0-10 kHz |
+| Load cell                     | Done *not tested*         | Imbalance mV/V |
 
 | Generation | Implementation | Setpoint |
 | --- | --- | --- |
-| V, mV                         | Done and tested           | 1 Setpoint (mV/V)                                      |
-| mA active/passive             | Done *basic testing*      | 1 Setpoint (mA)                                        |
-| RTD 2W                        | Done *not tested*         | 1 Setpoint RTD °C                                      |
-| Thermocouples                 | Done *not tested*         | 1 Setpoint °C value *no Cold junction*                 |
+| V, mV                         | Done and tested           | 1 Setpoint (mV/V) |
+| mA active/passive             | Done *basic testing*      | 1 Setpoint (mA) |
+| RTD 2W                        | Done *not tested*         | 1 Setpoint RTD °C |
+| Thermocouples                 | Done *not tested*         | 1 Setpoint °C value *no Cold junction* |
 | Frequency (square waves)      | Done and tested 0-10kHz   | 2 Setpoints: LE and FE f (Hz) *sensibility uV not set* |
 | Pulses count generation       | Done *not tested*         | 2 Setpoints: LE and FE f (Hz) *min-max levels not set* |
-| Load cell                     | Done *not tested*         | 1 Setpoint : Imbalance mV/V                            |
+| Load cell                     | Done *not tested*         | 1 Setpoint : Imbalance mV/V |
 
 | Others | Status |
 | --- | --- |
-| Ramps editing          | Not implemented, not planned  |
-| Ramps application      | Not implemented, not planned  |
-| Data logging start/stop| Not implemented, not planned  |
-| Logged data retrieval  | Not implemented, not planned  |
-| Clock read/sync        | Not implemented               |
-| Firmware version read  | Not implemented               |
-| Battery level          | Not implemented               |
+| Ramps editing          | Not implemented, not planned |
+| Ramps application      | Not implemented, not planned |
+| Data logging start/stop| Not implemented, not planned |
+| Logged data retrieval  | Not implemented, not planned |
+| Clock read/sync        | Not implemented |
+| Firmware version read  | Not implemented |
+| Battery level          | Not implemented |
 
 ## How to build
 
@@ -136,19 +136,52 @@ Generations require one or more setpoint, depending on the specific function.
 
 In all cases, the workflow is the same.
 
-* Create a Command object
+* Read example
 
 ```js
+var command = new MSC.Command(MSC.CommandType.mV); // Read mV
+var result = await MSC.Execute(command);
+if (result.error) {
+    // Something happened with command execution (device off, comm error...)
+    return;
+}
+var measure = MSC.GetState().lastMeasure;
+if (measure.error) {
+    // Measure is not valid ; should retry 
+}
+else {
+    console.log(measure); // Print the measurements
+}
+```
+
+* Generation example
+
+```js
+var command = new MSC.Command(MSC.CommandType.GEN_V, 5.2); // Generate 5.2 V
+var result = await MSC.Execute(command);
+if (result.error) {
+    // Something happened with command execution (device off, comm error...)
+    return;
+}
+var sp = MSC.GetState().lastSetpoint;
+if (sp.error) {
+    // Generation has error (e.g. short circuit, wrong connections...) 
+}
+else {
+    console.log(sp); // Print the setpoint
+}
 
 ```
 
-* Call MSC.Execute() and verify the returned value
+* If another command is pending execution, Execute() will wait until completion.
 
-If another command is pending execution, Execute() will wait until completion.
+* If the state machine is stopped, an attempt will be made to start the machine.
 
-The API will put the device in OFF state before writing the setpoint for safety, then apply the new mode settings.
+* API will try to re-execute the command if communication breaks during execution.
 
-For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter.
+* The API will put the device in OFF state before writing the setpoint for safety, then apply the new mode settings.
+
+* For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter.
 
 ### Various
 

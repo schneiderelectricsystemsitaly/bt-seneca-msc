@@ -2,4 +2,4 @@
 *.bak
 node_modules/
 bt-seneca-msc.code-workspace
-.vscode/launch.json
+.vscode/
