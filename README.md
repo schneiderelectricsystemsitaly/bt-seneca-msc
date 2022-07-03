@@ -115,8 +115,8 @@ mstate.stats          // Generic statistics, useful for debugging only.
 
 The state property returned by GetState() can have the following values
 
- Constant          | Value                               | Meaning                              | Next
---- | --- | ---
+| Constant | Value | Meaning | Next |
+| --- | --- | --- | --- |
  NOT_CONNECTED     | 'Not connected'                     | Initial state (before Pair())        | CONNECTING
  CONNECTING        | 'Bluetooth device pairing...'       | Waiting for pairing to complete      | DEVICE_PAIRED
  DEVICE_PAIRED     | 'Device paired'                     | Pairing completed, no BT interface   | SUBSCRIBING
