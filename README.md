@@ -115,26 +115,26 @@ mstate.stats          // Generic statistics, useful for debugging only.
 
 The state property returned by GetState() can have the following values
 
-| Constant          | Value                               | Meaning                              | Next               |
-|-------------------|-------------------------------------|-----------------------------------------------------------|
-| NOT_CONNECTED     | 'Not connected'                     | Initial state (before Pair())        | CONNECTING         |
-| CONNECTING        | 'Bluetooth device pairing...'       | Waiting for pairing to complete      | DEVICE_PAIRED      |
-| DEVICE_PAIRED     | 'Device paired'                     | Pairing completed, no BT interface   | SUBSCRIBING        |
-| SUBSCRIBING       | 'Bluetooth interfaces connecting...'| Waiting for BT interfaces            | METER_INIT         |
-| READY             | 'Ready'                             | Ready to execute commands            | BUSY               |
-| BUSY              | 'Busy'                              | Executing command or refreshing data | READY,ERROR        |
-| ERROR             | 'Error'                             | An exception has occured (BT or data)| METER_INIT         |
-| STOPPING          | 'Closing BT interfaces...'          | Processing Stop request from UI      | STOPPED            |
-| STOPPED           | 'Stopped'                           | Everything has stopped               | -                  |
-| METER_INIT        | 'Meter connected'                   | State after SUBSCRIBING              | METER_INITIALIZING |
-| METER_INITIALIZING| 'Reading meter state...'            | State after METER_INIT (reading data)| READY              |
+ Constant          | Value                               | Meaning                              | Next
+--- | --- | ---
+ NOT_CONNECTED     | 'Not connected'                     | Initial state (before Pair())        | CONNECTING
+ CONNECTING        | 'Bluetooth device pairing...'       | Waiting for pairing to complete      | DEVICE_PAIRED
+ DEVICE_PAIRED     | 'Device paired'                     | Pairing completed, no BT interface   | SUBSCRIBING
+ SUBSCRIBING       | 'Bluetooth interfaces connecting...'| Waiting for BT interfaces            | METER_INIT
+ READY             | 'Ready'                             | Ready to execute commands            | BUSY
+ BUSY              | 'Busy'                              | Executing command or refreshing data | READY,ERROR
+ ERROR             | 'Error'                             | An exception has occured (BT or data)| METER_INIT
+ STOPPING          | 'Closing BT interfaces...'          | Processing Stop request from UI      | STOPPED
+ STOPPED           | 'Stopped'                           | Everything has stopped               | -
+ METER_INIT        | 'Meter connected'                   | State after SUBSCRIBING              | METER_INITIALIZING
+ METER_INITIALIZING| 'Reading meter state...'            | State after METER_INIT (reading data)| READY
 
 ### Sending commands to the meter
 
 The MSC device supports readings and generations. Each function corresponds to a CommandType enum value.
-Generations require one or more setpoint, depending on the specific function. 
+Generations require one or more setpoint, depending on the specific function.
 
-In all cases, the workflow is the same. 
+In all cases, the workflow is the same.
 
 * Create a Command object
 
