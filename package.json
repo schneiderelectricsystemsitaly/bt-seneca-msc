@@ -29,5 +29,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dist": "browserify . --standalone MSC -d | uglifyjs > ./dist/bt-seneca-msc.min.js",
     "dev": "browserify . --standalone MSC -d -o ./dist/bt-seneca-msc.js"
+  },
+  "publishConfig": {
+  	"registry":"https://npm.pkg.github.com"
   }
 }
