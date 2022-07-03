@@ -8,10 +8,39 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 ## Requirements and limitations
 * A recent browser supporting bluetooth
 * A Seneca Multi Smart Calibrator device (see https://www.seneca.it/msc/ )
-* Not all MSC features are implemented, missing:
-** Ramps
-** Data-logging
-** Clock sync
+* MSC features status:
+
+| Measurements                  | Implementation            | Data returned                                 |
+-------------------------------------------------------------------------------------------------------------
+| V, mV readings                | Done and tested           | Only Instantaneous, min, max values (no avg)  |
+| mA active/passive readings    | Done and tested           | Only Instantaneous, min, max values (no avg)  |
+| RTD readings                  | Done and tested 2W        | Instantaneous RTD °C and Ohms values          |
+| Thermocouples 2W/3W/4W read   | Done *not tested*         | Instantaneous °C value (no cold junction)     |
+| Frequency reading             | Done and tested           | Frequency of leading and falling edges        |
+| Pulse count reading           | Done and tested 0-10kHz   | Counts of leading and falling edges           |
+| Frequency reading             | Done and tested           | Tested with square wave 0-10 kHz              |
+| Load cell                     | Done *not tested*         | Imbalance mV/V                                |
+
+| Generation                    | Implementation            | Setpoint                                               |
+----------------------------------------------------------------------------------------------------------------------
+| V, mV                         | Done and tested           | 1 Setpoint (mV/V)                                      |
+| mA active/passive             | Done *basic testing*      | 1 Setpoint (mA)                                        |
+| RTD 2W                        | Done *not tested*         | 1 Setpoint RTD °C                                      |
+| Thermocouples                 | Done *not tested*         | 1 Setpoint °C value *no Cold junction*                 |
+| Frequency (square waves)      | Done and tested 0-10kHz   | 2 Setpoints: LE and FE f (Hz) *sensibility uV not set* |
+| Pulses count generation       | Done *not tested*         | 2 Setpoints: LE and FE f (Hz) *min-max levels not set* |
+| Load cell                     | Done *not tested*         | 1 Setpoint : Imbalance mV/V                            |
+
+| Others                 | Status                        |
+----------------------------------------------------------
+| Ramps editing          | Not implemented, not planned  |
+| Ramps application      | Not implemented, not planned  |
+| Data logging start/stop| Not implemented, not planned  |
+| Logged data retrieval  | Not implemented, not planned  |
+| Clock read/sync        | Not implemented               |
+| Firmware version read  | Not implemented               |
+| Battery level          | Not implemented               |
+
 ## How to build
 
 * Install Node.js 
@@ -56,36 +85,37 @@ await MSC.GetState(); // array - Get the current state
 ### Getting the current state of the meter
 
 * Behind the API, there is a state machine running every 750 ms. 
+* If there is no command pending from API, read requests will be done to refresh the state at this frequency.
 * When the meter is measuring, measurement and error flag are refreshed at this rate (see: btState.lastMeasure). 
 * When the meter is generating, setpoint and error flag is read (see: btState.lastSetpoint).
 
 ```
 var mstate = MSC.GetState();
-mstate.state           // State machine internal status (Ready,Busy,Pairing,...)
-mstate.lastSetpoint    // Last executed generation function. Check for error flag. Element at position 0 is the setpoint.
-mstate.lastMeasure     // Last measurement. Element at position 0 is the main measurement.
+mstate.state          // State machine internal status (Ready,Busy,Pairing,...)
+mstate.lastSetpoint   // Last executed generation function. Element at position 0 is the setpoint.
+mstate.lastMeasure    // Last measurement. Element at position 0 is the main measurement.
 mstate.deviceName     // Name of the bluetooth device paired
 mstate.deviceSerial   // Serial number of the MSC device
-mstate.deviceMode      // Current mode of the MSC device (see CommandType values)
-mstate.stats           // Generic statistics, useful for debugging only.
+mstate.deviceMode     // Current mode of the MSC device (see CommandType values)
+mstate.stats          // Generic statistics, useful for debugging only.
 ```
 * Internal states reference
 
-```
-const State = {
-    NOT_CONNECTED: 'Not connected',
-    CONNECTING: 'Bluetooth device pairing...',
-    DEVICE_PAIRED: 'Device paired',
-    SUBSCRIBING: 'Bluetooth interfaces connecting...',
-    READY: 'Ready',
-    BUSY: 'Busy',
-    ERROR: 'Error',
-    STOPPING: 'Closing BT interfaces...',
-    STOPPED: 'Stopped',
-    METER_INIT: 'Acquiring meter state...',
-    METER_INITIALIZING: 'Reading meter state...'
-};
-```
+The state property returned by GetState() can have the following values
+
+| Constant          | Value                               | Meaning                              | Next               |
+|-------------------|-------------------------------------|-----------------------------------------------------------|
+| NOT_CONNECTED     | 'Not connected'                     | Initial state (before Pair())        | CONNECTING         |
+| CONNECTING        | 'Bluetooth device pairing...'       | Waiting for pairing to complete      | DEVICE_PAIRED      |
+| DEVICE_PAIRED     | 'Device paired'                     | Pairing completed, no BT interface   | SUBSCRIBING        |
+| SUBSCRIBING       | 'Bluetooth interfaces connecting...'| Waiting for BT interfaces            | METER_INIT         |
+| READY             | 'Ready'                             | Ready to execute commands            | BUSY               |
+| BUSY              | 'Busy'                              | Executing command or refreshing data | READY,ERROR        |
+| ERROR             | 'Error'                             | An exception has occured (BT or data)| METER_INIT         |
+| STOPPING          | 'Closing BT interfaces...'          | Processing Stop request from UI      | STOPPED            |
+| STOPPED           | 'Stopped'                           | Everything has stopped               | -                  |
+| METER_INIT        | 'Meter connected'                   | State after SUBSCRIBING              | METER_INITIALIZING |
+| METER_INITIALIZING| 'Reading meter state...'            | State after METER_INIT (reading data)| READY              |
 
 ### Sending commands to the meter
 
@@ -103,7 +133,7 @@ If another command is pending execution, Execute() will wait until completion.
 
 The API will put the device in OFF state before writing the setpoint for safety, then apply the new mode settings.
 
-For some functions, statistics reset command will be sent to the meter.
+For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter.
 
 ### Various
 
