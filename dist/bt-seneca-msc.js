@@ -731,7 +731,7 @@ const State = {
     ERROR: 'Error',
     STOPPING: 'Closing BT interfaces...',
     STOPPED: 'Stopped',
-    METER_INIT: 'Acquiring meter state...',
+    METER_INIT: 'Meter connected',
     METER_INITIALIZING: 'Reading meter state...'
 };
 
@@ -1089,21 +1089,25 @@ function parseMeasure(responseFC3, mode) {
             meas = getFloat32LEBS(responseFC3, 0);
             meas2 = getFloat32LEBS(responseFC3, 4);
             return {
-                "Temperature RTD (°C)": Math.round(meas * 100) / 100,
-                "RTD (Ohms)": Math.round(meas2 * 10) / 10, "Timestamp": new Date()
+                "Temperature RTD (°C)": Math.round(meas * 10) / 10,
+                "RTD (Ohms)": Math.round(meas2 * 10) / 10, 
+                "Timestamp": new Date()
             };
         case CommandType.Frequency:
             meas = getFloat32LEBS(responseFC3, 0);
-            return { "Frequency (Hz)": Math.round(meas * 10) / 10, "Timestamp": new Date() };
+            return { 
+                "Frequency (Hz)": Math.round(meas * 10) / 10, 
+                "Timestamp": new Date() 
+            };
         case CommandType.mA_active:
         case CommandType.mA_passive:
             min = getFloat32LEBS(responseFC3, 0);
             max = getFloat32LEBS(responseFC3, 4);
             meas = getFloat32LEBS(responseFC3, 8);
             return {
-                "Current (mA)": Math.round(meas * 10) / 10,
-                "Min current (mA)": Math.round(min * 10) / 10,
-                "Max current (mA)": Math.round(max * 10) / 10,
+                "Current (mA)": Math.round(meas * 100) / 100,
+                "Min current (mA)": Math.round(min * 100) / 100,
+                "Max current (mA)": Math.round(max * 100) / 100,
                 "Timestamp": new Date()
             };
         case CommandType.V:
@@ -1122,16 +1126,16 @@ function parseMeasure(responseFC3, mode) {
             meas = getFloat32LEBS(responseFC3, 8);
             return {
                 "Voltage (mV)": Math.round(meas * 100) / 100,
-                "Min voltage (mV)": Math.round(min * 10) / 10,
-                "Max voltage (mV)": Math.round(max * 10) / 10,
+                "Min voltage (mV)": Math.round(min * 100) / 100,
+                "Max voltage (mV)": Math.round(max * 100) / 100,
                 "Timestamp": new Date()
             };
         case CommandType.PulseTrain:
             meas = getFloat32LEBS(responseFC3, 0);
-            meas2 = getUint32LEBS(responseFC3, 4);
+            meas2 = getFloat32LEBS(responseFC3, 4);
             return { "Pulse ON": meas, "Pulse OFF": meas2, "Timestamp": new Date() };
         case CommandType.LoadCell:
-            meas = getFloat32LEBS(responseFC3, 8);
+            meas = getFloat32LEBS(responseFC3, 0);
             return { "Imbalance (mV/V)": meas, "Timestamp": new Date() };
         default:
             return { "Unknown": Math.round(meas * 1000) / 1000, "Timestamp": new Date() };
@@ -1342,7 +1346,6 @@ function parseSetpointRead(registers, mode) {
             if (tick2 != 0)
                 fOFF = Math.round(1 / (tick2 * 2 / 20000.0), 0);
             return { "Frequency ON (Hz)": fON, "Frequency OFF (Hz)": fOFF, "Timestamp": new Date() };
-        case CommandType.GEN_Cu50_3W:
         case CommandType.GEN_Cu50_2W:
         case CommandType.GEN_Cu100_2W:
         case CommandType.GEN_Ni100_2W:
