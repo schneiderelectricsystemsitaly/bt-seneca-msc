@@ -1,6 +1,6 @@
 {
   "name": "bt-seneca-msc",
-  "version": "0.0.4",
+  "version": "0.0.3",
   "description": "A pure Javascript API for the Seneca Multi Smart Calibrator (MSC) device, using web bluetooth.",
   "main": "js/meterApi.js",
   "repository": {
@@ -29,8 +29,5 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dist": "browserify . --standalone MSC -d | uglifyjs > ./dist/bt-seneca-msc.min.js",
     "dev": "browserify . --standalone MSC -d -o ./dist/bt-seneca-msc.js"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   }
 }
