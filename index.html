@@ -35,7 +35,7 @@
     <h1>API COMMANDS</h1>
     <table id="api" width="100%">
         <tr>
-            <td><button id="startBt">MeterPair()</button></td>
+            <td><button id="startBt">Pair()</button></td>
             <td>
                 <div id="resultPair"></div>
             </td>
@@ -46,7 +46,7 @@
             </td>
         </tr>
         <tr>
-            <td><button id="stopBt">MeterStop()</button></td>
+            <td><button id="stopBt">Stop()</button></td>
             <td>
                 <div id="resultStop"></div>
             </td>
@@ -54,13 +54,13 @@
             <td><input type="number" id="new_command_sp" /></td>
         </tr>
         <tr>
-            <td><button id="testBtn">Test()</button></td>
+            <td><button id="testBtn">Test</button></td>
             <td>
                 <div id="resultPair"></div>
             </td>
             <td>Add</td>
             <td>
-                <input type="button" id="executeBtn" value="MeterExecute(command)">
+                <input type="button" id="executeBtn" value="Execute(command)">
                 <div id="resultExecute"></div>
             </td>
         </tr>
@@ -70,7 +70,7 @@
     <input type="button" id="defaultLog" value="Loglevel: default" onclick="MSC.log.setLevel(MSC.log.levels.WARN);">
     <br />
     </div>
-    <h1>DEVICE STATUS</h1>
+    <h1>GetState()</h1>
     <div class="row">
         <div class="column">
             <table id="state" border="1">
