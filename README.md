@@ -1,4 +1,5 @@
-# bt-seneca-msc
+# bt-seneca-msc project
+
 A pure Javascript API for the Seneca Multi Smart Calibrator device, using web bluetooth.
 
 It has minimal dependencies (one logger packages), implements modbus RTU FC3/FC16 functions and has been tested with a Seneca MSC device with firmware 1.0.44 ; tested on PC/Windows with Chrome and Edge. Source is Node.js but the distribution versions are CommonJS (browserified with a standalone MSC object).
@@ -6,12 +7,13 @@ It has minimal dependencies (one logger packages), implements modbus RTU FC3/FC1
 A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 
 ## Requirements and limitations
+
 * A recent browser supporting bluetooth
 * A Seneca Multi Smart Calibrator device (see https://www.seneca.it/msc/ )
 * MSC features status:
 
 | Measurements                  | Implementation            | Data returned                                 |
--------------------------------------------------------------------------------------------------------------
+|------------------------------------------------------------------------------------------------------------
 | V, mV readings                | Done and tested           | Only Instantaneous, min, max values (no avg)  |
 | mA active/passive readings    | Done and tested           | Only Instantaneous, min, max values (no avg)  |
 | RTD readings                  | Done and tested 2W        | Instantaneous RTD °C and Ohms values          |
@@ -22,7 +24,7 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | Load cell                     | Done *not tested*         | Imbalance mV/V                                |
 
 | Generation                    | Implementation            | Setpoint                                               |
-----------------------------------------------------------------------------------------------------------------------
+|---------------------------------------------------------------------------------------------------------------------
 | V, mV                         | Done and tested           | 1 Setpoint (mV/V)                                      |
 | mA active/passive             | Done *basic testing*      | 1 Setpoint (mA)                                        |
 | RTD 2W                        | Done *not tested*         | 1 Setpoint RTD °C                                      |
@@ -32,7 +34,7 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | Load cell                     | Done *not tested*         | 1 Setpoint : Imbalance mV/V                            |
 
 | Others                 | Status                        |
-----------------------------------------------------------
+|---------------------------------------------------------
 | Ramps editing          | Not implemented, not planned  |
 | Ramps application      | Not implemented, not planned  |
 | Data logging start/stop| Not implemented, not planned  |
@@ -46,7 +48,8 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 * Install Node.js 
 * Checkout the repository
 * Run from your command line:
-```
+
+```bash
     npm install
     npm run dist
     npm run dev
@@ -55,29 +58,36 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 ## How to use in your application
 
 * For Node.js applications :
-```
+
+```bash
 npm install bt-seneca-msc
 ```
+
 * For ASPNET.core :
-```
+
+```powershell
 libman install bt-seneca-msc --provider jsdelivr
 ```
 
 ## External API
 
 There are 4 operations available:
-```
+
+```js
 await MSC.Pair(); // bool - Pair to bluetooth
 await MSC.Stop(); // bool - Disconnect the bluetooth and stops the polling
 await MSC.Execute(MSC.Command); // bool - Execute command. If the device is not paired, an attempt will be made.
 await MSC.GetState(); // array - Get the current state
 ```
+
 ### Connecting to the meter
 
 * Call MSC.Pair() while handling a user gesture in the browser (i.e. button-click)
-```
+
+```js
  var result = await MSC.Pair(); // true when connection has been established
 ```
+
 * A dialog will be shown to the user of devices with bluetooth name beginning with MSC
 * After pairing, the required bluetooth interfaces for Modbus RTU read and write will be established.
 * In case of communication errors after pairing, attempts will be made to reestablish bluetooth interfaces automatically.
@@ -89,7 +99,8 @@ await MSC.GetState(); // array - Get the current state
 * When the meter is measuring, measurement and error flag are refreshed at this rate (see: btState.lastMeasure). 
 * When the meter is generating, setpoint and error flag is read (see: btState.lastSetpoint).
 
-```
+```js
+
 var mstate = MSC.GetState();
 mstate.state          // State machine internal status (Ready,Busy,Pairing,...)
 mstate.lastSetpoint   // Last executed generation function. Element at position 0 is the setpoint.
@@ -99,6 +110,7 @@ mstate.deviceSerial   // Serial number of the MSC device
 mstate.deviceMode     // Current mode of the MSC device (see CommandType values)
 mstate.stats          // Generic statistics, useful for debugging only.
 ```
+
 * Internal states reference
 
 The state property returned by GetState() can have the following values
@@ -125,8 +137,11 @@ Generations require one or more setpoint, depending on the specific function.
 In all cases, the workflow is the same. 
 
 * Create a Command object
+
+```js
+
 ```
-```
+
 * Call MSC.Execute() and verify the returned value
 
 If another command is pending execution, Execute() will wait until completion.
@@ -139,7 +154,7 @@ For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent
 
 * Command type int values
 
-```
+```js
 const CommandType = {
     mA_passive: 1,
     mA_active: 2,
@@ -204,4 +219,3 @@ const CommandType = {
     GEN_PulseTrain: 137
 }
 ```
-    
