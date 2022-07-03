@@ -12,8 +12,8 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 * A Seneca Multi Smart Calibrator device (see https://www.seneca.it/msc/ )
 * MSC features status:
 
-| Measurements                  | Implementation            | Data returned                                 |
-|------------------------------------------------------------------------------------------------------------
+| Measurements | Implementation | Data returned |
+| --- | --- | --- |
 | V, mV readings                | Done and tested           | Only Instantaneous, min, max values (no avg)  |
 | mA active/passive readings    | Done and tested           | Only Instantaneous, min, max values (no avg)  |
 | RTD readings                  | Done and tested 2W        | Instantaneous RTD °C and Ohms values          |
@@ -23,8 +23,8 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | Frequency reading             | Done and tested           | Tested with square wave 0-10 kHz              |
 | Load cell                     | Done *not tested*         | Imbalance mV/V                                |
 
-| Generation                    | Implementation            | Setpoint                                               |
-|---------------------------------------------------------------------------------------------------------------------
+| Generation | Implementation | Setpoint |
+| --- | --- | --- |
 | V, mV                         | Done and tested           | 1 Setpoint (mV/V)                                      |
 | mA active/passive             | Done *basic testing*      | 1 Setpoint (mA)                                        |
 | RTD 2W                        | Done *not tested*         | 1 Setpoint RTD °C                                      |
@@ -33,8 +33,8 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | Pulses count generation       | Done *not tested*         | 2 Setpoints: LE and FE f (Hz) *min-max levels not set* |
 | Load cell                     | Done *not tested*         | 1 Setpoint : Imbalance mV/V                            |
 
-| Others                 | Status                        |
-|---------------------------------------------------------
+| Others | Status |
+| --- | --- |
 | Ramps editing          | Not implemented, not planned  |
 | Ramps application      | Not implemented, not planned  |
 | Data logging start/stop| Not implemented, not planned  |
