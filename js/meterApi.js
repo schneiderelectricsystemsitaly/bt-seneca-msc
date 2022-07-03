@@ -17,13 +17,13 @@ const log = require("loglevel");
  */
 function GetState() {
     return {
-        "lastSetpoint" : btState.lastSetpoint,
-        "lastMeasure" : btState.lastMeasure,
-        "deviceName" : btState.btDevice?.name,
-        "deviceSerial" : btState.meter?.serial,
-        "stats" : btState.stats,
-        "deviceMode" : btState.meter?.mode,
-        "status" : btState.state
+        "lastSetpoint": btState.lastSetpoint,
+        "lastMeasure": btState.lastMeasure,
+        "deviceName": btState.btDevice?.name,
+        "deviceSerial": btState.meter?.serial,
+        "stats": btState.stats,
+        "deviceMode": btState.meter?.mode,
+        "status": btState.state
     };
 }
 
@@ -790,14 +790,14 @@ function parseMeasure(responseFC3, mode) {
             meas2 = getFloat32LEBS(responseFC3, 4);
             return {
                 "Temperature RTD (°C)": Math.round(meas * 10) / 10,
-                "RTD (Ohms)": Math.round(meas2 * 10) / 10, 
+                "RTD (Ohms)": Math.round(meas2 * 10) / 10,
                 "Timestamp": new Date()
             };
         case CommandType.Frequency:
             meas = getFloat32LEBS(responseFC3, 0);
-            return { 
-                "Frequency (Hz)": Math.round(meas * 10) / 10, 
-                "Timestamp": new Date() 
+            return {
+                "Frequency (Hz)": Math.round(meas * 10) / 10,
+                "Timestamp": new Date()
             };
         case CommandType.mA_active:
         case CommandType.mA_passive:
@@ -1025,16 +1025,19 @@ function makeSetpointRead(mode) {
  * @returns {number} the last setpoint
  */
 function parseSetpointRead(registers, mode) {
+    // Round to two digits
+    var rounded = Math.round(getFloat32LEBS(registers, 0) * 100) / 100;
+
     switch (mode) {
         case CommandType.GEN_mA_active:
         case CommandType.GEN_mA_passive:
-            return { "Current (mA)": getFloat32LEBS(registers, 0), "Timestamp": new Date() };
+            return { "Current (mA)": rounded, "Timestamp": new Date() };
         case CommandType.GEN_V:
-            return { "Voltage (V)": getFloat32LEBS(registers, 0), "Timestamp": new Date() };
+            return { "Voltage (V)": rounded, "Timestamp": new Date() };
         case CommandType.GEN_mV:
-            return { "Voltage (mV)": getFloat32LEBS(registers, 0), "Timestamp": new Date() };
+            return { "Voltage (mV)": rounded, "Timestamp": new Date() };
         case CommandType.GEN_LoadCell:
-            return { "Imbalance (mV/V)": getFloat32LEBS(registers, 0), "Timestamp": new Date() };
+            return { "Imbalance (mV/V)": rounded, "Timestamp": new Date() };
         case CommandType.GEN_Frequency:
         case CommandType.GEN_PulseTrain:
             var tick1 = getUint32LEBS(registers, 0);
@@ -1062,15 +1065,15 @@ function parseSetpointRead(registers, mode) {
         case CommandType.GEN_THERMO_R:
         case CommandType.GEN_THERMO_S:
         case CommandType.GEN_THERMO_T:
-            return { "Temperature (°C)": getFloat32LEBS(registers, 0), "Timestamp": new Date() };
+            return { "Temperature (°C)": rounded, "Timestamp": new Date() };
         default:
-            return { "Value": getFloat32LEBS(registers, 0), "Timestamp": new Date() };
+            return { "Value": rounded, "Timestamp": new Date() };
     }
 
 }
 
 
-/*********************** BLUETOOTH HANDLING FUNCTIONS **********************/
+/************************************************** BLUETOOTH HANDLING FUNCTIONS *****************************************************/
 
 /**
  * Main loop of the meter handler.
@@ -1184,14 +1187,14 @@ async function processCommand() {
         log.info('\t\tExecuting command ' + command);
 
         // First set NONE because we don't want to write new setpoints with active generation
-        log.debug("Setting meter to OFF");
+        log.debug("\t\tSetting meter to OFF");
         packet = makeModeRequest(CommandType.OFF);
         await SendAndResponse(packet);
         await sleep(25);
 
         // Now write the setpoint (if command is a generating one)
         if (command.type > CommandType.OFF) {
-            log.debug("Writing setpoint");
+            log.debug("\t\tWriting setpoint :" + command.setpoint);
             response = await SendAndResponse(makeSetpointRequest(command.type, command.setpoint));
             if (!parseFC16(response, 0)) {
                 throw new Error("Setpoint not correctly written");
@@ -1200,7 +1203,7 @@ async function processCommand() {
         }
 
         // Now write the mode set
-        log.debug("Setting new mode");
+        log.debug("\t\tSetting new mode :" + command.type);
         packet = makeModeRequest(command.type);
         if (packet != null) {
             response = await SendAndResponse(packet);
@@ -1221,7 +1224,7 @@ async function processCommand() {
                 case CommandType.mA_passive:
                     // Reset the min/max/avg value
                     await sleep(25);
-                    log.debug("Resetting statistics");
+                    log.debug("\t\tResetting statistics");
                     startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [5]);
                     response = await SendAndResponse(startGen);
                     if (!parseFC16(response, 1)) {
@@ -1232,7 +1235,7 @@ async function processCommand() {
                     break;
                 case CommandType.GEN_PulseTrain:
                     await sleep(25);
-                    log.debug("Resetting statistics");
+                    log.debug("\t\tResetting statistics");
                     startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_AUX1, [9, 2]);
                     response = await SendAndResponse(startGen);
                     if (!parseFC16(response, 2)) {
@@ -1243,7 +1246,7 @@ async function processCommand() {
                     break;
                 case CommandType.GEN_Frequency:
                     await sleep(25);
-                    log.debug("Resetting statistics");
+                    log.debug("\t\tResetting statistics");
                     startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_AUX1, [9, 1]);
                     response = await SendAndResponse(startGen);
                     if (!parseFC16(response, 2)) {
@@ -1258,12 +1261,13 @@ async function processCommand() {
         } else {
             command.error = true;
             command.pending = false;
+            log.error("Could not generate modbus packet for command", command);
         }
         btState.command = null;
         btState.state = State.READY;
     }
     catch (err) {
-        log.error("** error while executing: " + err);
+        log.error("** error while executing command: " + err);
         btState.state = State.METER_INIT;
         btState.stats["exceptions"]++;
         if (err instanceof ModbusError)
@@ -1300,8 +1304,7 @@ async function SendAndResponse(command) {
     var answer = btState.response.slice();
     btState.response = null;
 
-    btState.stats["responseTime"] = Math.round((1.0 * btState.stats["responseTime"] * btState.stats["responses"] +
-        endTime - startTime) / (btState.stats["responses"] + 1));
+    btState.stats["responseTime"] = Math.round((1.0 * btState.stats["responseTime"] * (btState.stats["responses"] % 500) + (endTime - startTime)) / ((btState.stats["responses"] % 500) + 1));
     btState.stats["lastResponseTime"] = Math.round(endTime - startTime) + " ms";
     btState.stats["responses"]++;
 
@@ -1407,7 +1410,7 @@ function handleNotifications(event) {
  * E.g. button click. This is due to BlueTooth API security model.
  * @param {boolean} forceSelection true to force the bluetooth device selection by user, false to use the one starting with MSC
  * */
-async function btPairDevice(forceSelection=true) {
+async function btPairDevice(forceSelection = true) {
     btState.state = State.CONNECTING;
 
     try {
@@ -1419,7 +1422,7 @@ async function btPairDevice(forceSelection=true) {
         var device = null;
 
         // Do we already have permission?
-        if (navigator.bluetooth.getDevices && !forceSelection) { 
+        if (navigator.bluetooth.getDevices && !forceSelection) {
             const availableDevices = await navigator.bluetooth.getDevices();
             availableDevices.forEach(function (dev, index) { if (dev.name.startsWith("MSC")) device = dev; });
         }
@@ -1563,13 +1566,6 @@ async function refreshMeasure() {
  * Gets the current values for the generated U,I from the device
  * */
 async function refreshGeneration() {
-    /* not clear if we can monitor the realtime generation
-    var response = await SendAndResponse(makeGenStats());
-    if (response != null) {
-        var stats = parseGenStats(parseFC3(response));
-        btState.generation = stats;
-    }*/
-
     var response = await SendAndResponse(makeSetpointRead(btState.meter.mode));
     if (response != null) {
         var results = parseSetpointRead(parseFC3(response), btState.meter.mode);
