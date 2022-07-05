@@ -683,8 +683,8 @@ const MSCRegisters = {
     SerialNumber: 10,
     CurrentMode: 100,
     MeasureFlags: 102,
-    AUX1: 107,
-    CMD: 108,
+    CMD: 107,
+    AUX1: 108,
     LoadCellMeasure: 114,
     TempMeasure: 120,
     RtdTemperatureMeasure: 128,
@@ -697,8 +697,8 @@ const MSCRegisters = {
     PulseONMeasure: 152,
     BatteryMeasure: 174,
     GenerationFlags: 202,
-    GEN_AUX1: 207,
-    GEN_CMD: 208,
+    GEN_CMD: 207,
+    GEN_AUX1: 208,
     CurrentSetpoint: 210,
     VoltageSetpoint: 212,
     LoadCellSetpoint: 216,
@@ -952,7 +952,7 @@ function makeModeRequest(mode) {
     }
 
     if (mode > CommandType.NONE_UNKNOWN && mode <= CommandType.OFF) { // Measurements
-        return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.AUX1, [1, mode]);
+        return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [1, mode]);
     }
     else if (mode > CommandType.OFF && mode < CommandType.GEN_RESERVED) { // Generations
         switch (mode) {
@@ -966,7 +966,7 @@ function makeModeRequest(mode) {
             case CommandType.GEN_THERMO_S:
             case CommandType.GEN_THERMO_T:
                 // Cold junction not configured
-                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_AUX1, [1, mode]);
+                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [1, mode]);
             case CommandType.GEN_Cu50_3W:
             case CommandType.GEN_Cu50_2W:
             case CommandType.GEN_Cu100_2W:
@@ -977,7 +977,7 @@ function makeModeRequest(mode) {
             case CommandType.GEN_PT1000_2W:
             default:
                 // All the simple cases 
-                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_AUX1, [1, mode]);
+                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [1, mode]);
         }
 
     }
@@ -1522,8 +1522,8 @@ async function processCommand() {
                 case CommandType.mV:
                 case CommandType.mA_active:
                 case CommandType.mA_passive:
+                    await sleep(1000);
                     // Reset the min/max/avg value
-                    await sleep(25);
                     log.debug("\t\tResetting statistics");
                     startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [5]);
                     response = await SendAndResponse(startGen);
@@ -1534,9 +1534,9 @@ async function processCommand() {
                     }
                     break;
                 case CommandType.GEN_PulseTrain:
-                    await sleep(25);
+                    await sleep(1000);
                     log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_AUX1, [9, 2]);
+                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [9, 2]); // Start with low
                     response = await SendAndResponse(startGen);
                     if (!parseFC16(response, 2)) {
                         command.error = true;
@@ -1545,9 +1545,9 @@ async function processCommand() {
                     }
                     break;
                 case CommandType.GEN_Frequency:
-                    await sleep(25);
+                    await sleep(1000);
                     log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_AUX1, [9, 1]);
+                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [9, 1]); // start gen
                     response = await SendAndResponse(startGen);
                     if (!parseFC16(response, 2)) {
                         command.error = true;
