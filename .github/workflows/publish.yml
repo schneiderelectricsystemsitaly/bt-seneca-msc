@@ -8,6 +8,9 @@ jobs:
   release:
     name: npm-publish
     runs-on: ubuntu-latest
+    permissions: 
+      contents: read
+      packages: write 
     steps:
     - name: Checkout repository
       uses: actions/checkout@master
@@ -16,6 +19,7 @@ jobs:
       with:
         node-version: 16
         registry-url: https://registry.npmjs.org
+    - run: npm test
     - name: Publish
       run: npm publish --access public
       env: # More info about the environment variables in the README

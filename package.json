@@ -17,7 +17,8 @@
   },
   "devDependencies": {
     "browserify": "^17.0.0",
-    "uglify-js": "^3.16.1"
+    "uglify-js": "^3.16.1",
+    "jest": "^28.1.2"
   },
   "author": "Pascal Brunot",
   "license": "MIT",
@@ -26,7 +27,7 @@
   },
   "homepage": "https://github.com/PBrunot/bt-seneca-msc#readme",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "dist": "browserify . --standalone MSC -d | uglifyjs > ./dist/bt-seneca-msc.min.js",
     "dev": "browserify . --standalone MSC -d -o ./dist/bt-seneca-msc.js"
   }
