@@ -1115,6 +1115,7 @@ async function stateMachine() {
                 // Timeout, try to resubscribe
                 log.warn("Timeout in SUBSCRIBING");
                 btState.state = State.DEVICE_PAIRED;
+                btState.state_cpt = 0;
             }
             break;
         case State.METER_INIT: // ready to communicate, acquire meter status
@@ -1125,6 +1126,7 @@ async function stateMachine() {
                 log.warn("Timeout in METER_INITIALIZING");
                 // Timeout, try to resubscribe
                 nextAction = btSubscribe;
+                btState.state_cpt = 0;
             }
             nextAction = undefined;
             break;
@@ -1143,6 +1145,7 @@ async function stateMachine() {
                 log.warn("Timeout in BUSY");
                 // Timeout, try to resubscribe
                 nextAction = btSubscribe;
+                btState.state_cpt = 0;
             }
             nextAction = undefined;
             break;
@@ -1414,15 +1417,18 @@ async function btPairDevice(forceSelection = true) {
     btState.state = State.CONNECTING;
 
     try {
-        const availability = await navigator.bluetooth.getAvailability();
-        if (!availability) {
-            log.error("Bluetooth not available in browser.");
-            throw new Error("Browser does not provide bluetooth");
+        if (typeof(navigator.bluetooth?.getAvailability) == "function") {
+            const availability = await navigator.bluetooth.getAvailability();
+            if (!availability) {
+                log.error("Bluetooth not available in browser.");
+                throw new Error("Browser does not provide bluetooth");
+            }
         }
         var device = null;
 
         // Do we already have permission?
-        if (navigator.bluetooth.getDevices && !forceSelection) {
+        if (typeof(navigator.bluetooth?.getDevices) == "function" 
+            && !forceSelection) {
             const availableDevices = await navigator.bluetooth.getDevices();
             availableDevices.forEach(function (dev, index) { if (dev.name.startsWith("MSC")) device = dev; });
         }
@@ -1582,4 +1588,4 @@ async function refreshGeneration() {
  * */
 let btState = new APIState();
 
-module.exports = { Stop, Pair, Execute, GetState, State, CommandType, Command, Parse, log };
+module.exports = { Stop, Pair, Execute, GetState, State, CommandType, Command, Parse, log, BlueToothMSC };

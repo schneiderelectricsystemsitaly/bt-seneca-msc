@@ -17,8 +17,9 @@
   },
   "devDependencies": {
     "browserify": "^17.0.0",
-    "uglify-js": "^3.16.1",
-    "jest": "^28.1.2"
+    "jest": "^28.1.2",
+    "jest-environment-jsdom": "^28.1.2",
+    "uglify-js": "^3.16.1"
   },
   "author": "Pascal Brunot",
   "license": "MIT",
