@@ -20,9 +20,13 @@ jobs:
         node-version: 16
         registry-url: https://registry.npmjs.org
     - run: npm ci
-    - run: npm test
+    - run: npm run dist # build the minified version
+    - run: npm run dev  # build the CommonJS non-minified version
+    - run: npm test     # run tests
     - name: Publish
-      run: npm publish
-      env: # More info about the environment variables in the README
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Leave this as is, it's automatically generated
-        NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }} # You need to set this in your repo settings
+      uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.NPM_AUTH_TOKEN }}
+      if: steps.publish.outputs.type != 'none'
+      run: |
+        echo "Version changed: ${{ steps.publish.outputs.old-version }} => ${{ steps.publish.outputs.version }}"
