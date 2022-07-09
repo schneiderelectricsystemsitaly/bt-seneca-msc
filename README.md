@@ -102,7 +102,7 @@ await MSC.GetState(); // array - Get the current state
 ```js
 
 var mstate = MSC.GetState();
-mstate.state          // State machine internal status (Ready,Busy,Pairing,...)
+mstate.status         // State machine internal status (Ready,Busy,Pairing,...)
 mstate.lastSetpoint   // Last executed generation function. Element at position 0 is the setpoint.
 mstate.lastMeasure    // Last measurement. Element at position 0 is the main measurement.
 mstate.deviceName     // Name of the bluetooth device paired
@@ -113,7 +113,7 @@ mstate.stats          // Generic statistics, useful for debugging only.
 
 * Internal states reference
 
-The state property returned by GetState() can have the following values
+The state property returned by GetState() can have the following values (see MSC.State enum)
 
 | Constant | Value | Meaning | Next |
 | --- | --- | --- | --- |
@@ -145,7 +145,7 @@ if (result.error) {
     // Something happened with command execution (device off, comm error...)
     return;
 }
-var measure = MSC.GetState().lastMeasure;
+var measure = await MSC.GetState().lastMeasure;
 if (measure.error) {
     // Measure is not valid ; should retry 
 }
