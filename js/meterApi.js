@@ -15,7 +15,7 @@ const log = require("loglevel");
  * Returns a copy of the current state
  * @returns {array} status of meter
  */
-function GetState() {
+async function GetState() {
     return {
         "lastSetpoint": btState.lastSetpoint,
         "lastMeasure": btState.lastMeasure,
@@ -245,7 +245,7 @@ function parseFC3(response) {
  * @param {number} expected number of expected written registers from slave. If <=0, it will not be checked.
  * @returns {boolean} true if all registers have been written
  */
-function parseFC16(response, expected) {
+function parseFC16checked(response, expected) {
     try {
         const result = parseFC16(response);
         return (expected <= 0 || result[1] === expected); // check if length is matching
@@ -1115,6 +1115,7 @@ async function stateMachine() {
                 // Timeout, try to resubscribe
                 log.warn("Timeout in SUBSCRIBING");
                 btState.state = State.DEVICE_PAIRED;
+                btState.state_cpt = 0;
             }
             break;
         case State.METER_INIT: // ready to communicate, acquire meter status
@@ -1125,6 +1126,7 @@ async function stateMachine() {
                 log.warn("Timeout in METER_INITIALIZING");
                 // Timeout, try to resubscribe
                 nextAction = btSubscribe;
+                btState.state_cpt = 0;
             }
             nextAction = undefined;
             break;
@@ -1143,6 +1145,7 @@ async function stateMachine() {
                 log.warn("Timeout in BUSY");
                 // Timeout, try to resubscribe
                 nextAction = btSubscribe;
+                btState.state_cpt = 0;
             }
             nextAction = undefined;
             break;
@@ -1196,7 +1199,7 @@ async function processCommand() {
         if (command.type > CommandType.OFF) {
             log.debug("\t\tWriting setpoint :" + command.setpoint);
             response = await SendAndResponse(makeSetpointRequest(command.type, command.setpoint));
-            if (!parseFC16(response, 0)) {
+            if (!parseFC16checked(response, 0)) {
                 throw new Error("Setpoint not correctly written");
             }
             await sleep(25);
@@ -1210,7 +1213,7 @@ async function processCommand() {
             command.request = packet;
             command.answer = response;
 
-            if (!parseFC16(response, 0)) {
+            if (!parseFC16checked(response, 0)) {
                 command.error = true;
                 command.pending = false;
                 throw new Error("Not all registers were written");
@@ -1227,7 +1230,7 @@ async function processCommand() {
                     log.debug("\t\tResetting statistics");
                     startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [5]);
                     response = await SendAndResponse(startGen);
-                    if (!parseFC16(response, 1)) {
+                    if (!parseFC16checked(response, 1)) {
                         command.error = true;
                         command.pending = false;
                         throw new Error("Failure to reset stats.");
@@ -1238,7 +1241,7 @@ async function processCommand() {
                     log.debug("\t\tResetting statistics");
                     startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [9, 2]); // Start with low
                     response = await SendAndResponse(startGen);
-                    if (!parseFC16(response, 2)) {
+                    if (!parseFC16checked(response, 2)) {
                         command.error = true;
                         command.pending = false;
                         throw new Error("Not all registers were written");
@@ -1249,7 +1252,7 @@ async function processCommand() {
                     log.debug("\t\tResetting statistics");
                     startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [9, 1]); // start gen
                     response = await SendAndResponse(startGen);
-                    if (!parseFC16(response, 2)) {
+                    if (!parseFC16checked(response, 2)) {
                         command.error = true;
                         command.pending = false;
                         throw new Error("Not all registers were written");
@@ -1414,15 +1417,18 @@ async function btPairDevice(forceSelection = true) {
     btState.state = State.CONNECTING;
 
     try {
-        const availability = await navigator.bluetooth.getAvailability();
-        if (!availability) {
-            log.error("Bluetooth not available in browser.");
-            throw new Error("Browser does not provide bluetooth");
+        if (typeof(navigator.bluetooth?.getAvailability) == "function") {
+            const availability = await navigator.bluetooth.getAvailability();
+            if (!availability) {
+                log.error("Bluetooth not available in browser.");
+                throw new Error("Browser does not provide bluetooth");
+            }
         }
         var device = null;
 
         // Do we already have permission?
-        if (navigator.bluetooth.getDevices && !forceSelection) {
+        if (typeof(navigator.bluetooth?.getDevices) == "function" 
+            && !forceSelection) {
             const availableDevices = await navigator.bluetooth.getDevices();
             availableDevices.forEach(function (dev, index) { if (dev.name.startsWith("MSC")) device = dev; });
         }
@@ -1582,4 +1588,4 @@ async function refreshGeneration() {
  * */
 let btState = new APIState();
 
-module.exports = { Stop, Pair, Execute, GetState, State, CommandType, Command, Parse, log };
+module.exports = { Stop, Pair, Execute, GetState, State, CommandType, Command, Parse, log, BlueToothMSC };

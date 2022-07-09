@@ -2,12 +2,15 @@ name: "Release on npm"
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   release:
     name: npm-publish
     runs-on: ubuntu-latest
+    permissions: 
+      contents: read
+      packages: write 
     steps:
     - name: Checkout repository
       uses: actions/checkout@master
@@ -16,8 +19,14 @@ jobs:
       with:
         node-version: 16
         registry-url: https://registry.npmjs.org
-    - name: Publish
-      run: npm publish --access public
-      env: # More info about the environment variables in the README
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Leave this as is, it's automatically generated
-        NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }} # You need to set this in your repo settings
+    - run: npm ci
+    - run: npm run dist # build the minified version
+    - run: npm run dev  # build the CommonJS non-minified version
+    - run: npm test     # run tests
+    - id: publish
+      uses: JS-DevTools/npm-publish@v1
+      with:
+        token: ${{ secrets.NPM_AUTH_TOKEN }}
+    - if: steps.publish.outputs.type != 'none'
+      run: |
+        echo "Version changed: ${{ steps.publish.outputs.old-version }} => ${{ steps.publish.outputs.version }}"
