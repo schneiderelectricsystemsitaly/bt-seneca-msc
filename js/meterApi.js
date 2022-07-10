@@ -547,7 +547,7 @@ class Command {
      * @param {CommandType} ctype
      */
     constructor(ctype = CommandType.NONE_UNKNOWN, setpoint = null) {
-        this.type = ctype;
+        this.type = parseInt(ctype);
         this.setpoint = setpoint;
         this.error = false;
         this.pending = true;
@@ -557,6 +557,54 @@ class Command {
 
     toString() {
         return "Type: " + Parse(CommandType, this.type) + ", setpoint:" + this.setpoint + ", pending:" + this.pending + ", error:" + this.error;
+    }
+
+    /**
+     * Gets the default setpoint for this command type
+     * @returns {Array} setpoint(s) expected
+     */
+    defaultSetpoint() {
+        switch(this.type) {
+            case CommandType.GEN_THERMO_B:
+            case CommandType.GEN_THERMO_E:
+            case CommandType.GEN_THERMO_J:
+            case CommandType.GEN_THERMO_K:
+            case CommandType.GEN_THERMO_L:
+            case CommandType.GEN_THERMO_N:
+            case CommandType.GEN_THERMO_R:
+            case CommandType.GEN_THERMO_S:
+            case CommandType.GEN_THERMO_T:
+            case CommandType.GEN_Cu50_3W:
+            case CommandType.GEN_Cu50_2W:
+            case CommandType.GEN_Cu100_2W:
+            case CommandType.GEN_Ni100_2W:
+            case CommandType.GEN_Ni120_2W:
+            case CommandType.GEN_PT100_2W:
+            case CommandType.GEN_PT500_2W:
+            case CommandType.GEN_PT1000_2W:
+                return {'Temperature (°C)':0.0};
+            case CommandType.GEN_V:
+                return {'Voltage (mV)':0.0};
+            case CommandType.GEN_mV:
+                return {'Voltage (mV)':0.0};            
+            case CommandType.GEN_mA_active:
+            case CommandType.GEN_mA_passive:
+                return {'Current (mA)':0.0};
+            case CommandType.GEN_LoadCell:
+                return {'Imbalance (mV/V)' : 0.0 };
+            case CommandType.GEN_Frequency:
+                return {'Frequency (Hz)' : 0.0 };
+            case CommandType.GEN_PulseTrain:
+                return {'Pulses count' : 0, 'Frequency (Hz)' : 0.0 };
+            case CommandType.SET_UThreshold_F:
+                return {'Uthreshold (V)' : 2.0 };
+            case CommandType.SET_Sensitivity_uS:
+                return {'Sensibility (uS)' : 2.0 };
+            case CommandType.SET_ColdJunction:
+                return {'Cold junction compensation': 0.0};
+            default:
+                return {};
+        }
     }
 }
 
@@ -1004,7 +1052,7 @@ function makeSetpointRequest(mode, setpoint) {
         case CommandType.GEN_THERMO_S:
         case CommandType.GEN_THERMO_T:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ThermoTemperatureSetpoint, sp); // °C setpoint
-        case CommandType.LoadCell:
+        case CommandType.GEN_LoadCell:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.LoadCellSetpoint, sp); // mV/V setpoint
         case CommandType.GEN_Frequency:
             dt = new ArrayBuffer(16); // 2 Uint32 + 2 Float

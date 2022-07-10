@@ -10,6 +10,8 @@
     <!-- CSS only -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -49,8 +51,12 @@
                             <select id="new_command_id" class="form-control"></select>
                         </div>
                         <div class="row">
-                            <label for="new_command_sp">Setpoint</label>
+                            <label for="new_command_sp" id="setpoint1_desc">Setpoint 1</label>
                             <input type="number" id="new_command_sp" class="form-control" />
+                        </div>
+                        <div class="row">
+                            <label for="new_command_sp2" id="setpoint2_desc">Setpoint 2</label>
+                            <input type="number" id="new_command_sp2" class="form-control" />
                         </div>
                         <div class="row">
                             <input type="button" id="executeBtn" value="Execute(command)" class="btn btn-primary">
@@ -144,28 +150,73 @@
         </div>
     </div>
     <script>
-        document.getElementById("startBt").onclick = async () => {
-            document.getElementById("resultPair").innerHTML = "Pending...";
+        // Event listeners
+        $("#startBt").click(async () => {
+            $("#resultPair").text("Pending...");
             var res = await MSC.Pair();
-            document.getElementById("resultPair").innerHTML = "Result PAIR: " + res;
-        };
-        document.getElementById("stopBt").onclick = async () => {
-            document.getElementById("resultStop").innerHTML = "Pending...";
+            $("#resultPair").text("Result PAIR: " + res);
+        });
+        $("#stopBt").click(async () => {
+            $("#resultStop").text("Pending...");
             var res = await MSC.Stop();
-            document.getElementById("resultStop").innerHTML = "Result STOP: " + res;
-        };
-        document.getElementById("executeBtn").onclick = async () => {
+            $("#resultStop").text("Result STOP: " + res);
+        });
+        $("#executeBtn").click(async () => {
             await addRequest();
-        };
+        });
 
-        var select = document.getElementById("new_command_id");
-        for (var i in MSC.CommandType) {
-            var opt = document.createElement('option');
-            opt.value = MSC.CommandType[i];
-            opt.innerHTML = i;
-            if (!i.includes("RESERVED"))
-                select.appendChild(opt);
+        // Called to enable/disable setpoints depending on commands
+        function configureSetpoints(ctype) {
+            // Create a temporary command
+            const command = new MSC.Command(ctype);
+            // Get the default setpoint for this command type
+            const setpoints = command.defaultSetpoint();
+            switch (Object.keys(setpoints).length) {
+                case 0:
+                    $("#new_command_sp").addClass('d-none');
+                    $("#new_command_sp2").addClass('d-none');
+                    $("#setpoint1_desc").addClass('d-none');
+                    $("#setpoint2_desc").addClass('d-none');
+                    $("#setpoint1_desc").text('Setpoint 1');
+                    $("#setpoint2_desc").text('Setpoint 2');
+                    break;
+                case 1:
+                    $("#new_command_sp").removeClass('d-none');
+                    $("#new_command_sp2").addClass('d-none');
+
+                    $("#setpoint1_desc").text(Object.keys(setpoints)[0]);
+
+                    $("#setpoint1_desc").removeClass('d-none');
+                    $("#setpoint2_desc").addClass('d-none');
+                    break;
+                case 2:
+                    $("#new_command_sp").removeClass('d-none');
+                    $("#new_command_sp2").removeClass('d-none');
+
+                    $("#setpoint1_desc").text(Object.keys(setpoints)[0]);
+                    $("#setpoint2_desc").text(Object.keys(setpoints)[1]);
+
+                    $("#setpoint1_desc").removeClass('d-none');
+                    $("#setpoint2_desc").removeClass('d-none');
+                    break;
+                default:
+                    throw new Error("Not handled:" + setpoints.length);
+            }
         }
+        
+        $("#new_command_id").change(() => {
+            const value = $("#new_command_id").val();
+            configureSetpoints(value);
+        });
+
+        // Fill the command select items with available commands
+        var select = $("#new_command_id");
+        for (var i in MSC.CommandType) {
+            var opt = $("<option>").val(MSC.CommandType[i]).text(i);
+            if (!i.includes("RESERVED"))
+                select.append(opt);
+        }
+        configureSetpoints($("#new_command_id").val());
 
         function dumpArray(arr) {
             var elem = "";
@@ -176,24 +227,36 @@
         }
 
         async function addRequest() {
-            var type = parseInt(document.getElementById("new_command_id").value);
-            var setpoint = document.getElementById("new_command_sp").value;
-            const comm = new MSC.Command(type, setpoint);
-            document.getElementById("resultExecute").innerHTML = "Pending...";
+            var type = parseInt($("#new_command_id").val());
+            
+            var setpoint1 = $("#new_command_sp").val();
+            var setpoint2 = $("#new_command_sp2").val();
+            var comm;
+
+            if ($("#new_command_sp").hasClass('d-none')) {
+                comm = new MSC.Command(type);
+            }
+            else if ($("#new_command_sp2").hasClass('d-none')) {
+                comm = new MSC.Command(type, setpoint1);
+            } else {
+                comm = new MSC.Command(type, [setpoint1, setpoint2]);
+            }
+
+            $("#resultExecute").text("Pending...");
             var res = await MSC.Execute(comm);
-            document.getElementById("resultExecute").innerHTML = "Result : " + res;
+            $("#resultExecute").text("Result : " + res);
         }
         async function updateStatus() {
             var mstate = await MSC.GetState();
-            document.getElementById("overall").innerHTML = "ready:" + mstate.ready + ", initializing:" + mstate.initializing;
-            document.getElementById("status").innerHTML = mstate.status;
-            document.getElementById("sp").innerHTML = dumpArray(mstate.lastSetpoint);
-            document.getElementById("meas").innerHTML = dumpArray(mstate.lastMeasure);
-            document.getElementById("btinfo").innerHTML = mstate.deviceName;
-            document.getElementById("serial").innerHTML = mstate.deviceSerial;
-            document.getElementById("mode").innerHTML = mstate.deviceMode;
-            document.getElementById("battery").innerHTML = mstate.batteryLevel;
-            document.getElementById("stats").innerHTML = dumpArray(mstate.stats);
+            $("overall").text("ready:" + mstate.ready + ", initializing:" + mstate.initializing);
+            $("status").text(mstate.status);
+            $("sp").text(dumpArray(mstate.lastSetpoint));
+            $("#meas").text(dumpArray(mstate.lastMeasure));
+            $("#btinfo").text(mstate.deviceName);
+            $("#serial").text(mstate.deviceSerial);
+            $("#mode").text(mstate.deviceMode);
+            $("#battery").text(mstate.batteryLevel);
+            $("#stats").text(dumpArray(mstate.stats));
             setTimeout(updateStatus, 500);
         }
         setTimeout(updateStatus, 500);
@@ -229,4 +292,5 @@
         }
     </script>
 </body>
+
 </html>

@@ -184,11 +184,22 @@ else {
 
 * If the state machine is stopped, an attempt will be made to start the machine.
 
-* API will try to re-execute the command if communication breaks during execution.
+* API will try to re-execute the command if communication breaks during execution (see internal states above).
 
-* The API will put the device in OFF state before writing the setpoint for safety, then apply the new mode settings.
+* The API will put the device in OFF state before writing setpoints (for safety), then apply the new mode settings after a slight delay.
 
-* For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter.
+* For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter 1s after mode change.
+
+* To get the expected setpoints for a specific command type, use Command.defaultSetpoint(). This is used in the demo page in order to present to the user the right input boxes with meaningful descriptions.
+
+```js
+// Create a temporary command
+const command = new MSC.Command(ctype);
+// Get the default setpoint for this command type
+const setpoints = command.defaultSetpoint();
+// Inspect setpoints array to get information about units, setpoint required...
+const howmany = Object.keys(setpoints).length;
+```
 
 ### Various
 
