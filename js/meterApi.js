@@ -1485,7 +1485,7 @@ async function btPairDevice(forceSelection = true) {
     btState.state = State.CONNECTING;
 
     try {
-        if (typeof (navigator.bluetooth?.getAvailability) == "function") {
+        if (typeof (navigator.bluetooth?.getAvailability) == 'function') {
             const availability = await navigator.bluetooth.getAvailability();
             if (!availability) {
                 log.error("Bluetooth not available in browser.");
@@ -1495,7 +1495,7 @@ async function btPairDevice(forceSelection = true) {
         var device = null;
 
         // Do we already have permission?
-        if (typeof (navigator.bluetooth?.getDevices) == "function"
+        if (typeof (navigator.bluetooth?.getDevices) == 'function'
             && !forceSelection) {
             const availableDevices = await navigator.bluetooth.getDevices();
             availableDevices.forEach(function (dev, index) { if (dev.name.startsWith("MSC")) device = dev; });
