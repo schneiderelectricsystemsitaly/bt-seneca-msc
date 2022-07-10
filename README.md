@@ -17,7 +17,7 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | V, mV readings                | Done and tested           | Only Instantaneous, min, max values (no avg) |
 | mA active/passive readings    | Done and tested           | Only Instantaneous, min, max values (no avg) |
 | RTD readings                  | Done and tested 2W        | Instantaneous RTD °C and Ohms values |
-| Thermocouples 2W/3W/4W read   | Done *not tested*         | Instantaneous °C value (no cold junction) |
+| Thermocouples 2W/3W/4W read   | Done *not tested*         | Instantaneous °C value |
 | Frequency reading             | Done and tested           | Frequency of leading and falling edges |
 | Pulse count reading           | Done and tested 0-10kHz   | Counts of leading and falling edges |
 | Frequency reading             | Done and tested           | Tested with square wave 0-10 kHz |
@@ -41,7 +41,11 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | Logged data retrieval  | Not implemented, not planned |
 | Clock read/sync        | Not implemented |
 | Firmware version read  | Not implemented |
-| Battery level          | Not implemented |
+| Battery level          | Read once at connection |
+| Setting of min us for pulses | Implemented (same threshold ON/OFF) |
+| Setting of cold junction compensation | Implemented  *not tested* |
+| Setting of min V for f measurement | Implemented *not tested* |
+| Conversion of mV/V to kg | Calculation not implemented |
 
 ## How to build
 
@@ -249,7 +253,10 @@ const CommandType = {
     GEN_Ni120_2W: 132,
     GEN_LoadCell: 135,
     GEN_Frequency: 136,
-    GEN_PulseTrain: 137
+    GEN_PulseTrain: 137,
+    SET_UThreshold_F: 1001,
+    SET_Sensitivity_uS: 1002,
+    SET_ColdJunction: 1003
 }
 ```
 
