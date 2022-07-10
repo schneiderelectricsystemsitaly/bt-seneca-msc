@@ -16,6 +16,33 @@ const log = require("loglevel");
  * @returns {array} status of meter
  */
 async function GetState() {
+    let ready = false;
+    let initializing = false;
+    switch(btState.state) {
+        // States requiring user input
+        case State.ERROR:
+        case State.STOPPED:
+        case State.NOT_CONNECTED:
+            ready = false;
+            initializing = false;
+            break;
+        case State.BUSY:
+        case State.IDLE:
+            ready = true;
+            initializing = false;
+            break;
+        case State.CONNECTING:
+        case State.DEVICE_PAIRED:
+        case State.METER_INIT:
+        case State.METER_INITIALIZING:
+        case State.SUBSCRIBING:
+            initializing = true;
+            ready = false;
+            break;
+        default:
+            ready = false;
+            initializing = false;
+    }
     return {
         "lastSetpoint": btState.lastSetpoint,
         "lastMeasure": btState.lastMeasure,
@@ -24,7 +51,9 @@ async function GetState() {
         "stats": btState.stats,
         "deviceMode": btState.meter?.mode,
         "status": btState.state,
-        "batteryLevel": btState.meter?.battery
+        "batteryLevel": btState.meter?.battery,
+        "ready" : ready,
+        "initializing" : initializing
     };
 }
 
@@ -76,7 +105,7 @@ async function Pair() {
     else if (btState.state == State.ERROR) {
         btState.state = State.NOT_CONNECTED; // Try to restart
     }
-    await waitFor(() => btState.state == State.READY || btState.state == State.STOPPED);
+    await waitFor(() => btState.state == State.IDLE || btState.state == State.STOPPED);
     log.info("Pairing completed, state :", btState.state);
     return (btState.state != State.STOPPED);
 }
@@ -437,7 +466,7 @@ const State = {
     CONNECTING: 'Bluetooth device pairing...',
     DEVICE_PAIRED: 'Device paired',
     SUBSCRIBING: 'Bluetooth interfaces connecting...',
-    READY: 'Ready',
+    IDLE: 'Idle',
     BUSY: 'Busy',
     ERROR: 'Error',
     STOPPING: 'Closing BT interfaces...',
@@ -1186,7 +1215,7 @@ async function stateMachine() {
             }
             nextAction = undefined;
             break;
-        case State.READY: // ready to process commands from API
+        case State.IDLE: // ready to process commands from API
             if (btState.command != null)
                 nextAction = processCommand;
             else {
@@ -1332,7 +1361,7 @@ async function processCommand() {
         }
 
         btState.command = null;
-        btState.state = State.READY;
+        btState.state = State.IDLE;
     }
     catch (err) {
         log.error("** error while executing command: " + err);
@@ -1398,7 +1427,7 @@ async function meterInit() {
         response = await SendAndResponse(makeBatteryLevel());
         btState.meter.battery = Math.round(parseBattery(parseFC3(response)) * 100) / 100;
 
-        btState.state = State.READY;
+        btState.state = State.IDLE;
     }
     catch (err) {
         log.warn("Error while initializing meter :" + err);
@@ -1485,7 +1514,7 @@ async function btPairDevice(forceSelection = true) {
     btState.state = State.CONNECTING;
 
     try {
-        if (typeof (navigator.bluetooth?.getAvailability) == "function") {
+        if (typeof (navigator.bluetooth?.getAvailability) == 'function') {
             const availability = await navigator.bluetooth.getAvailability();
             if (!availability) {
                 log.error("Bluetooth not available in browser.");
@@ -1495,7 +1524,7 @@ async function btPairDevice(forceSelection = true) {
         var device = null;
 
         // Do we already have permission?
-        if (typeof (navigator.bluetooth?.getDevices) == "function"
+        if (typeof (navigator.bluetooth?.getDevices) == 'function'
             && !forceSelection) {
             const availableDevices = await navigator.bluetooth.getDevices();
             availableDevices.forEach(function (dev, index) { if (dev.name.startsWith("MSC")) device = dev; });
@@ -1512,7 +1541,7 @@ async function btPairDevice(forceSelection = true) {
         btState.btDevice = device;
         btState.state = State.DEVICE_PAIRED;
         log.info("Bluetooth device " + device.name + " connected.");
-        await sleep(100);
+        await sleep(500);
     }
     catch (err) {
         log.warn("** error while connecting: " + err.message);
@@ -1609,7 +1638,7 @@ async function refresh() {
             else
                 await refreshMeasure();
         }
-        btState.state = State.READY;
+        btState.state = State.IDLE;
     }
     catch (err) {
         log.warn("Error while refreshing measure" + err);
@@ -1656,4 +1685,4 @@ async function refreshGeneration() {
  * */
 let btState = new APIState();
 
-module.exports = { Stop, Pair, Execute, GetState, State, CommandType, Command, Parse, log, BlueToothMSC };
+module.exports = { Stop, Pair, Execute, GetState, State, CommandType, Command, Parse, log };
