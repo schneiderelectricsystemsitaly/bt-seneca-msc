@@ -23,7 +23,8 @@ async function GetState() {
         "deviceSerial": btState.meter?.serial,
         "stats": btState.stats,
         "deviceMode": btState.meter?.mode,
-        "status": btState.state
+        "status": btState.state,
+        "batteryLevel": btState.meter?.battery
     };
 }
 
@@ -373,7 +374,12 @@ const CommandType = {
     GEN_LoadCell: 135,
     GEN_Frequency: 136,
     GEN_PulseTrain: 137,
-    GEN_RESERVED: 138
+    GEN_RESERVED: 138,
+    // Special settings below this points
+    SETTING_RESERVED: 1000,
+    SET_UThreshold_F: 1001,
+    SET_Sensitivity_uS: 1002,
+    SET_ColdJunction: 1003
 };
 
 /*
@@ -395,7 +401,11 @@ const MSCRegisters = {
     InstantMeasure: 136,
     PulseOFFMeasure: 150,
     PulseONMeasure: 152,
+    Sensibility_uS_OFF: 166,
+    Sensibility_uS_ON: 168,
     BatteryMeasure: 174,
+    ColdJunction: 190,
+    ThresholdU_Freq: 192,
     GenerationFlags: 202,
     GEN_CMD: 207,
     GEN_AUX1: 208,
@@ -407,6 +417,7 @@ const MSCRegisters = {
     PulsesCount: 252,
     FrequencyTICK1: 254,
     FrequencyTICK2: 256,
+
 };
 
 /*
@@ -536,10 +547,26 @@ function makeSerialNumber() {
 }
 
 /**
- * Generate the modbus RTU packet to read the serial number
+ * Generate the modbus RTU packet to read the current mode
  * */
 function makeCurrentMode() {
     return makeFC3(SENECA_MB_SLAVE_ID, 1, MSCRegisters.CurrentMode);
+}
+
+/**
+ * Generate the modbus RTU packet to read the current battery level
+ * */
+function makeBatteryLevel() {
+    return makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.BatteryMeasure);
+}
+
+/**
+ * Parses the register with battery level
+ * @param {ArrayBuffer} responseFC3 
+ * @returns {number} battery level in V
+ */
+function parseBattery(responseFC3) {
+    return getFloat32LEBS(responseFC3, 0);
 }
 
 /**
@@ -597,6 +624,20 @@ function setFloat32LEBS(dataView, offset, value) {
     const buff = new ArrayBuffer(4);
     const dv = new DataView(buff);
     dv.setFloat32(0, value, false);
+    dataView.setInt16(offset, dv.getInt16(2, false), false);
+    dataView.setInt16(offset + 2, dv.getInt16(0, false), false);
+}
+
+/**
+ * Converts with byte swap AB CD -> CD AB 
+ * @param {DataView} dataView buffer view to process
+ * @param {number} offset byte number where uint32 into the buffer
+ * @param {number} value value to set
+ */
+ function setUint32LEBS(dataView, offset, value) {
+    const buff = new ArrayBuffer(4);
+    const dv = new DataView(buff);
+    dv.setUint32(0, value, false);
     dataView.setInt16(offset, dv.getInt16(2, false), false);
     dataView.setInt16(offset + 2, dv.getInt16(0, false), false);
 }
@@ -795,6 +836,7 @@ function parseMeasure(responseFC3, mode) {
             };
         case CommandType.Frequency:
             meas = getFloat32LEBS(responseFC3, 0);
+            // Sensibilità mancanti
             return {
                 "Frequency (Hz)": Math.round(meas * 10) / 10,
                 "Timestamp": new Date()
@@ -831,11 +873,14 @@ function parseMeasure(responseFC3, mode) {
                 "Timestamp": new Date()
             };
         case CommandType.PulseTrain:
-            meas = getFloat32LEBS(responseFC3, 0);
-            meas2 = getFloat32LEBS(responseFC3, 4);
-            return { "Pulse ON": meas, "Pulse OFF": meas2, "Timestamp": new Date() };
+            meas = getUint32LEBS(responseFC3, 0);
+            meas2 = getUint32LEBS(responseFC3, 4);
+            // Soglia e sensibilità mancanti
+            return { "Pulse ON (#)": meas, "Pulse OFF (#)": meas2, "Timestamp": new Date() };
         case CommandType.LoadCell:
-            meas = getFloat32LEBS(responseFC3, 0);
+            meas = Math.round(getFloat32LEBS(responseFC3, 0) * 1000) / 1000;
+            // Kg mancanti
+            // Sensibilità, tara, portata mancanti
             return { "Imbalance (mV/V)": meas, "Timestamp": new Date() };
         default:
             return { "Unknown": Math.round(meas * 1000) / 1000, "Timestamp": new Date() };
@@ -898,6 +943,11 @@ function makeSetpointRequest(mode, setpoint) {
 
     setFloat32LEBS(dv, 0, setpoint);
     const sp = [dv.getUint16(0, false), dv.getUint16(2, false)];
+
+    var dtInt = new ArrayBuffer(4);
+    var dvInt = new DataView(dtInt);
+    setUint32LEBS(dvInt, 0, setpoint);
+    const spInt = [dvInt.getUint16(0, false), dvInt.getUint16(2, false)];
 
     switch (mode) {
         case CommandType.GEN_V:
@@ -969,6 +1019,12 @@ function makeSetpointRequest(mode, setpoint) {
             //dv.getUint16(12, false), dv.getUint16(14, false),
             //dv.getUint16(16, false), dv.getUint16(18, false)];
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.PulsesCount, registers);
+        case CommandType.SET_UThreshold_F:
+            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ThresholdU_Freq, sp); // U min for freq measurement
+        case CommandType.SET_Sensitivity_uS:
+            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.Sensibility_uS_OFF, [spInt[0], spInt[1], spInt[0], spInt[1]]); // uV for pulse train measurement to ON / OFF
+        case CommandType.SET_ColdJunction:
+            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ColdJunction, sp); // unclear unit
         default:
             throw new Error("Not handled");
     }
@@ -1195,7 +1251,7 @@ async function processCommand() {
         await SendAndResponse(packet);
         await sleep(25);
 
-        // Now write the setpoint (if command is a generating one)
+        // Now write the setpoint (if command is a generating one). Settings are > Command.OFF.
         if (command.type > CommandType.OFF) {
             log.debug("\t\tWriting setpoint :" + command.setpoint);
             response = await SendAndResponse(makeSetpointRequest(command.type, command.setpoint));
@@ -1205,67 +1261,76 @@ async function processCommand() {
             await sleep(25);
         }
 
-        // Now write the mode set
-        log.debug("\t\tSetting new mode :" + command.type);
-        packet = makeModeRequest(command.type);
-        if (packet != null) {
-            response = await SendAndResponse(packet);
-            command.request = packet;
-            command.answer = response;
-
-            if (!parseFC16checked(response, 0)) {
-                command.error = true;
-                command.pending = false;
-                throw new Error("Not all registers were written");
-            }
-
-            // Some commands require START command to be given
-            switch (command.type) {
-                case CommandType.V:
-                case CommandType.mV:
-                case CommandType.mA_active:
-                case CommandType.mA_passive:
-                    await sleep(1000);
-                    // Reset the min/max/avg value
-                    log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [5]);
-                    response = await SendAndResponse(startGen);
-                    if (!parseFC16checked(response, 1)) {
-                        command.error = true;
-                        command.pending = false;
-                        throw new Error("Failure to reset stats.");
-                    }
-                    break;
-                case CommandType.GEN_PulseTrain:
-                    await sleep(1000);
-                    log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [9, 2]); // Start with low
-                    response = await SendAndResponse(startGen);
-                    if (!parseFC16checked(response, 2)) {
-                        command.error = true;
-                        command.pending = false;
-                        throw new Error("Not all registers were written");
-                    }
-                    break;
-                case CommandType.GEN_Frequency:
-                    await sleep(1000);
-                    log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [9, 1]); // start gen
-                    response = await SendAndResponse(startGen);
-                    if (!parseFC16checked(response, 2)) {
-                        command.error = true;
-                        command.pending = false;
-                        throw new Error("Not all registers were written");
-                    }
-                    break;
-            }
+        if (command.type > CommandType.SETTING_RESERVED) {
+            // Nothing else to do with settings
             command.error = false;
             command.pending = false;
-        } else {
-            command.error = true;
-            command.pending = false;
-            log.error("Could not generate modbus packet for command", command);
         }
+        else {
+            // Now write the mode set 
+            log.debug("\t\tSetting new mode :" + command.type);
+            packet = makeModeRequest(command.type);
+            if (packet != null) {
+                response = await SendAndResponse(packet);
+                command.request = packet;
+                command.answer = response;
+
+                if (!parseFC16checked(response, 0)) {
+                    command.error = true;
+                    command.pending = false;
+                    throw new Error("Not all registers were written");
+                }
+
+                // Some commands require START command to be given
+                switch (command.type) {
+                    case CommandType.V:
+                    case CommandType.mV:
+                    case CommandType.mA_active:
+                    case CommandType.mA_passive:
+                    case CommandType.PulseTrain:
+                        await sleep(1000);
+                        // Reset the min/max/avg value
+                        log.debug("\t\tResetting statistics");
+                        startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [5]);
+                        response = await SendAndResponse(startGen);
+                        if (!parseFC16checked(response, 1)) {
+                            command.error = true;
+                            command.pending = false;
+                            throw new Error("Failure to reset stats.");
+                        }
+                        break;
+                    case CommandType.GEN_PulseTrain:
+                        await sleep(1000);
+                        log.debug("\t\tResetting statistics");
+                        startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [9, 2]); // Start with low
+                        response = await SendAndResponse(startGen);
+                        if (!parseFC16checked(response, 2)) {
+                            command.error = true;
+                            command.pending = false;
+                            throw new Error("Not all registers were written");
+                        }
+                        break;
+                    case CommandType.GEN_Frequency:
+                        await sleep(1000);
+                        log.debug("\t\tResetting statistics");
+                        startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [9, 1]); // start gen
+                        response = await SendAndResponse(startGen);
+                        if (!parseFC16checked(response, 2)) {
+                            command.error = true;
+                            command.pending = false;
+                            throw new Error("Not all registers were written");
+                        }
+                        break;
+                }
+                command.error = false;
+                command.pending = false;
+            } else {
+                command.error = true;
+                command.pending = false;
+                log.error("Could not generate modbus packet for command", command);
+            }
+        }
+
         btState.command = null;
         btState.state = State.READY;
     }
@@ -1329,6 +1394,9 @@ async function meterInit() {
         response = await SendAndResponse(makeCurrentMode());
         btState.meter.mode = parseCurrentMode(parseFC3(response), CommandType.NONE_UNKNOWN);
         log.debug('\t\tCurrent mode:' + btState.meter.mode);
+
+        response = await SendAndResponse(makeBatteryLevel());
+        btState.meter.battery = Math.round(parseBattery(parseFC3(response)) * 100) / 100;
 
         btState.state = State.READY;
     }
@@ -1417,7 +1485,7 @@ async function btPairDevice(forceSelection = true) {
     btState.state = State.CONNECTING;
 
     try {
-        if (typeof(navigator.bluetooth?.getAvailability) == "function") {
+        if (typeof (navigator.bluetooth?.getAvailability) == "function") {
             const availability = await navigator.bluetooth.getAvailability();
             if (!availability) {
                 log.error("Bluetooth not available in browser.");
@@ -1427,7 +1495,7 @@ async function btPairDevice(forceSelection = true) {
         var device = null;
 
         // Do we already have permission?
-        if (typeof(navigator.bluetooth?.getDevices) == "function" 
+        if (typeof (navigator.bluetooth?.getDevices) == "function"
             && !forceSelection) {
             const availableDevices = await navigator.bluetooth.getDevices();
             availableDevices.forEach(function (dev, index) { if (dev.name.startsWith("MSC")) device = dev; });

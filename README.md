@@ -252,3 +252,19 @@ const CommandType = {
     GEN_PulseTrain: 137
 }
 ```
+
+# Branches & development info
+
+* Pushes to main will trigger GitHub actions for CI and NPM package update. If the package.json has a new version respect to NPM repository, it will be published automatically. Also, pushes to main branch update the Github pages with the sample application.
+* Most development shall happen in development branch, then PR to main once ready.
+* Testing is difficult without a real device due to the bluetooth interface. Only basic API tests are covered by JEST package. To run tests:
+
+```bash
+npm test
+```
+* The CommonJS files can be generated in two ways, minified ("dist") or normal ("dev") :
+
+```bash
+npm run dev
+npm run dist 
+```
