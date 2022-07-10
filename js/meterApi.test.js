@@ -23,17 +23,27 @@ describe('Basic tests', () => {
         expect(data).toHaveProperty('deviceSerial');
         expect(data).toHaveProperty('deviceMode');
         expect(data).toHaveProperty('stats');
+        expect(data).toHaveProperty('ready');
+        expect(data).toHaveProperty('initializing');
+        expect(data).toHaveProperty('batteryLevel');
     })
     
     test('Initial state is not connected', async () => {
         const data = await MSC.GetState();
         expect(data.status).toBe(MSC.State.NOT_CONNECTED);
+        expect(data.ready).toBeFalsy();
+        expect(data.initializing).toBeFalsy();
     })
     
     test('Pair fails (not in browser)', async () => {
-        const data = await MSC.Pair();
+        const result = await MSC.Pair();
         // Will fail without navigator object
-        expect(data).toBeFalsy();
+        expect(result).toBeFalsy();
+
+        const data = await MSC.GetState();
+        expect(data.status).toBe(MSC.State.STOPPED);
+        expect(data.ready).toBeFalsy();
+        expect(data.initializing).toBeFalsy();
     })
     
     test('Measurement execution fails', async () => {
