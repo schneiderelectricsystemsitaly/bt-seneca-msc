@@ -23,7 +23,8 @@ async function GetState() {
         "deviceSerial": btState.meter?.serial,
         "stats": btState.stats,
         "deviceMode": btState.meter?.mode,
-        "status": btState.state
+        "status": btState.state,
+        "batteryLevel": btState.meter?.battery
     };
 }
 
@@ -373,7 +374,13 @@ const CommandType = {
     GEN_LoadCell: 135,
     GEN_Frequency: 136,
     GEN_PulseTrain: 137,
-    GEN_RESERVED: 138
+    GEN_RESERVED: 138,
+    // Special settings below this points
+    SETTING_RESERVED : 1000,
+    SET_UThreshold_F : 1001,
+    SET_Sensitivity_uS : 1002,
+    SET_Sensitivity_mV_V : 1003,
+    SET_ColdJunction : 1004
 };
 
 /*
@@ -393,9 +400,13 @@ const MSCRegisters = {
     MinMeasure: 132,
     MaxMeasure: 134,
     InstantMeasure: 136,
+    Sensibility_mV_V: 148,
     PulseOFFMeasure: 150,
     PulseONMeasure: 152,
+    Sensibility_uS: 168,
     BatteryMeasure: 174,
+    ColdJunction: 190,
+    ThresholdU_Freq: 192,
     GenerationFlags: 202,
     GEN_CMD: 207,
     GEN_AUX1: 208,
@@ -407,6 +418,7 @@ const MSCRegisters = {
     PulsesCount: 252,
     FrequencyTICK1: 254,
     FrequencyTICK2: 256,
+    
 };
 
 /*
@@ -536,10 +548,26 @@ function makeSerialNumber() {
 }
 
 /**
- * Generate the modbus RTU packet to read the serial number
+ * Generate the modbus RTU packet to read the current mode
  * */
 function makeCurrentMode() {
     return makeFC3(SENECA_MB_SLAVE_ID, 1, MSCRegisters.CurrentMode);
+}
+
+/**
+ * Generate the modbus RTU packet to read the current battery level
+ * */
+function makeBatteryLevel() {
+    return makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.BatteryMeasure);
+}
+
+/**
+ * Parses the register with battery level
+ * @param {ArrayBuffer} responseFC3 
+ * @returns {number} battery level in V
+ */
+function parseBattery(responseFC3) {
+    return getFloat32LEBS(responseFC3, 0);
 }
 
 /**
@@ -795,6 +823,7 @@ function parseMeasure(responseFC3, mode) {
             };
         case CommandType.Frequency:
             meas = getFloat32LEBS(responseFC3, 0);
+            // Sensibilità mancanti
             return {
                 "Frequency (Hz)": Math.round(meas * 10) / 10,
                 "Timestamp": new Date()
@@ -831,11 +860,14 @@ function parseMeasure(responseFC3, mode) {
                 "Timestamp": new Date()
             };
         case CommandType.PulseTrain:
-            meas = getFloat32LEBS(responseFC3, 0);
-            meas2 = getFloat32LEBS(responseFC3, 4);
-            return { "Pulse ON": meas, "Pulse OFF": meas2, "Timestamp": new Date() };
+            meas = getUint32LEBS(responseFC3, 0);
+            meas2 = getUint32LEBS(responseFC3, 4);
+            // Soglia e sensibilità mancanti
+            return { "Pulse ON (#)": meas, "Pulse OFF (#)": meas2, "Timestamp": new Date() };
         case CommandType.LoadCell:
-            meas = getFloat32LEBS(responseFC3, 0);
+            meas = Math.round(getFloat32LEBS(responseFC3, 0)*1000)/1000;
+            // Kg mancanti
+            // Sensibilità, tara, portata mancanti
             return { "Imbalance (mV/V)": meas, "Timestamp": new Date() };
         default:
             return { "Unknown": Math.round(meas * 1000) / 1000, "Timestamp": new Date() };
@@ -969,6 +1001,14 @@ function makeSetpointRequest(mode, setpoint) {
             //dv.getUint16(12, false), dv.getUint16(14, false),
             //dv.getUint16(16, false), dv.getUint16(18, false)];
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.PulsesCount, registers);
+        case CommandType.SET_UThreshold_F:
+            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ThresholdU_Freq, sp); // U min for freq measurement
+        case CommandType.SET_Sensitivity_mV_V:
+            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.Sensibility_mV_V, sp); // Load cell sensibility
+        case CommandType.SET_Sensitivity_uS:
+            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.Sensibility_uS, sp); // uV for pulse train measurement
+        case CommandType.SET_ColdJunction:
+                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ColdJunction, sp); // unclear unit
         default:
             throw new Error("Not handled");
     }
@@ -1225,6 +1265,7 @@ async function processCommand() {
                 case CommandType.mV:
                 case CommandType.mA_active:
                 case CommandType.mA_passive:
+                case CommandType.PulseTrain:
                     await sleep(1000);
                     // Reset the min/max/avg value
                     log.debug("\t\tResetting statistics");
@@ -1329,6 +1370,9 @@ async function meterInit() {
         response = await SendAndResponse(makeCurrentMode());
         btState.meter.mode = parseCurrentMode(parseFC3(response), CommandType.NONE_UNKNOWN);
         log.debug('\t\tCurrent mode:' + btState.meter.mode);
+        
+        response = await SendAndResponse(makeBatteryLevel());
+        btState.meter.battery = Math.round(parseBattery(parseFC3(response))*100)/100;
 
         btState.state = State.READY;
     }
