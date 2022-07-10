@@ -40,6 +40,9 @@
                         <div class="col">
                             <button id="getState" class="btn btn-primary">GetState()</button>
                         </div>
+                        <div class="col">
+                            <div id="resultGetState"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -158,13 +161,18 @@
         });
         $("#stopBt").click(async () => {
             $("#resultStop").text("Pending...");
-            var res = await MSC.Stop();
+            var stop = await MSC.Execute(new MSC.Command(MSC.CommandType.OFF)); // Stop the meter first
+            var res = await MSC.Stop(); // Then close interface
             $("#resultStop").text("Result STOP: " + res);
         });
         $("#executeBtn").click(async () => {
             await addRequest();
         });
-
+        $("#getState").click(async () => {
+            $("#resultGetState").text("Pending...");
+            var res = await MSC.GetState();
+            $("#resultGetState").text("Result GetState: " + res);
+        });
         // Called to enable/disable setpoints depending on commands
         function configureSetpoints(ctype) {
             // Create a temporary command
@@ -254,7 +262,15 @@
             $("#meas").html(dumpArray(mstate.lastMeasure));
             $("#btinfo").text(mstate.deviceName);
             $("#serial").text(mstate.deviceSerial);
-            $("#mode").text(mstate.deviceMode);
+            
+            var description = "";
+            for(x in MSC.CommandType) {
+                if (MSC.CommandType[x] === mstate.deviceMode) {
+                    description = x;
+                    break;
+                }
+            }
+            $("#mode").text(mstate.deviceMode + " (" + description + ")");
             $("#battery").text(mstate.batteryLevel);
             $("#stats").html(dumpArray(mstate.stats));
             setTimeout(updateStatus, 500);

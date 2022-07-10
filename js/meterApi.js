@@ -115,7 +115,7 @@ async function Pair() {
  * */
 async function Stop() {
     log.info("Stop request received");
-
+    
     btState.stopRequest = true;
     await waitFor(() => !btState.started);
     btState.stopRequest = false;
@@ -584,7 +584,7 @@ class Command {
             case CommandType.GEN_PT1000_2W:
                 return {'Temperature (°C)':0.0};
             case CommandType.GEN_V:
-                return {'Voltage (mV)':0.0};
+                return {'Voltage (V)':0.0};
             case CommandType.GEN_mV:
                 return {'Voltage (mV)':0.0};            
             case CommandType.GEN_mA_active:
