@@ -185,7 +185,7 @@
         }
         async function updateStatus() {
             var mstate = await MSC.GetState();
-            document.getElementById("overall").innerHTML = "canExecute:" + mstate.canExecute + ", initializing:" + mstate.initializing;
+            document.getElementById("overall").innerHTML = "ready:" + mstate.ready + ", initializing:" + mstate.initializing;
             document.getElementById("status").innerHTML = mstate.status;
             document.getElementById("sp").innerHTML = dumpArray(mstate.lastSetpoint);
             document.getElementById("meas").innerHTML = dumpArray(mstate.lastMeasure);

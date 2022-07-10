@@ -27,7 +27,7 @@ async function GetState() {
             initializing = false;
             break;
         case State.BUSY:
-        case State.READY:
+        case State.IDLE:
             ready = true;
             initializing = false;
             break;
@@ -52,7 +52,7 @@ async function GetState() {
         "deviceMode": btState.meter?.mode,
         "status": btState.state,
         "batteryLevel": btState.meter?.battery,
-        "canExecute" : ready,
+        "ready" : ready,
         "initializing" : initializing
     };
 }
@@ -105,7 +105,7 @@ async function Pair() {
     else if (btState.state == State.ERROR) {
         btState.state = State.NOT_CONNECTED; // Try to restart
     }
-    await waitFor(() => btState.state == State.READY || btState.state == State.STOPPED);
+    await waitFor(() => btState.state == State.IDLE || btState.state == State.STOPPED);
     log.info("Pairing completed, state :", btState.state);
     return (btState.state != State.STOPPED);
 }
@@ -466,7 +466,7 @@ const State = {
     CONNECTING: 'Bluetooth device pairing...',
     DEVICE_PAIRED: 'Device paired',
     SUBSCRIBING: 'Bluetooth interfaces connecting...',
-    READY: 'Ready',
+    IDLE: 'Idle',
     BUSY: 'Busy',
     ERROR: 'Error',
     STOPPING: 'Closing BT interfaces...',
@@ -1215,7 +1215,7 @@ async function stateMachine() {
             }
             nextAction = undefined;
             break;
-        case State.READY: // ready to process commands from API
+        case State.IDLE: // ready to process commands from API
             if (btState.command != null)
                 nextAction = processCommand;
             else {
@@ -1361,7 +1361,7 @@ async function processCommand() {
         }
 
         btState.command = null;
-        btState.state = State.READY;
+        btState.state = State.IDLE;
     }
     catch (err) {
         log.error("** error while executing command: " + err);
@@ -1427,7 +1427,7 @@ async function meterInit() {
         response = await SendAndResponse(makeBatteryLevel());
         btState.meter.battery = Math.round(parseBattery(parseFC3(response)) * 100) / 100;
 
-        btState.state = State.READY;
+        btState.state = State.IDLE;
     }
     catch (err) {
         log.warn("Error while initializing meter :" + err);
@@ -1638,7 +1638,7 @@ async function refresh() {
             else
                 await refreshMeasure();
         }
-        btState.state = State.READY;
+        btState.state = State.IDLE;
     }
     catch (err) {
         log.warn("Error while refreshing measure" + err);

@@ -105,7 +105,7 @@ await MSC.GetState(); // array - Get the current state
 
 ```js
 
-var mstate = MSC.GetState();
+var mstate = await MSC.GetState();
 mstate.status         // State machine internal status (Ready,Busy,Pairing,...)
 mstate.lastSetpoint   // Last executed generation function. Element at position 0 is the setpoint.
 mstate.lastMeasure    // Last measurement. Element at position 0 is the main measurement.
@@ -113,6 +113,9 @@ mstate.deviceName     // Name of the bluetooth device paired
 mstate.deviceSerial   // Serial number of the MSC device
 mstate.deviceMode     // Current mode of the MSC device (see CommandType values)
 mstate.stats          // Generic statistics, useful for debugging only.
+mstate.ready          // The meter is ready to execute commands
+mstate.initializing   // The meter is initializing bluetooth
+mstate.batteryLevel   // Internal battery level in Volts
 ```
 
 * Internal states reference
@@ -125,13 +128,13 @@ The state property returned by GetState() can have the following values (see MSC
  CONNECTING        | 'Bluetooth device pairing...'       | Waiting for pairing to complete      | DEVICE_PAIRED
  DEVICE_PAIRED     | 'Device paired'                     | Pairing completed, no BT interface   | SUBSCRIBING
  SUBSCRIBING       | 'Bluetooth interfaces connecting...'| Waiting for BT interfaces            | METER_INIT
- READY             | 'Ready'                             | Ready to execute commands            | BUSY
- BUSY              | 'Busy'                              | Executing command or refreshing data | READY,ERROR
+ IDLE | 'Idle' | Ready to execute commands            | BUSY
+ BUSY              | 'Busy'                              | Executing command or refreshing data | IDLE,ERROR
  ERROR             | 'Error'                             | An exception has occured (BT or data)| METER_INIT
  STOPPING          | 'Closing BT interfaces...'          | Processing Stop request from UI      | STOPPED
  STOPPED           | 'Stopped'                           | Everything has stopped               | -
  METER_INIT        | 'Meter connected'                   | State after SUBSCRIBING              | METER_INITIALIZING
- METER_INITIALIZING| 'Reading meter state...'            | State after METER_INIT (reading data)| READY
+ METER_INITIALIZING| 'Reading meter state...'            | State after METER_INIT (reading data)| IDLE
 
 ### Sending commands to the meter
 
@@ -260,7 +263,7 @@ const CommandType = {
 }
 ```
 
-# Branches & development info
+## Branches & development info
 
 * Pushes to main will trigger GitHub actions for CI and NPM package update. If the package.json has a new version respect to NPM repository, it will be published automatically. Also, pushes to main branch update the Github pages with the sample application.
 * Most development shall happen in development branch, then PR to main once ready.
@@ -269,6 +272,7 @@ const CommandType = {
 ```bash
 npm test
 ```
+
 * The CommonJS files can be generated in two ways, minified ("dist") or normal ("dev") :
 
 ```bash
