@@ -1685,4 +1685,4 @@ async function refreshGeneration() {
  * */
 let btState = new APIState();
 
-module.exports = { Stop, Pair, Execute, GetState, State, CommandType, Command, Parse, log, BlueToothMSC };
+module.exports = { Stop, Pair, Execute, GetState, State, CommandType, Command, Parse, log };

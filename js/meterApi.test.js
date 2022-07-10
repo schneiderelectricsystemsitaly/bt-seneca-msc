@@ -8,11 +8,11 @@ describe('Basic tests', () => {
         expect(MSC.GetState).not.toBeNull();
     })
     
-    test('Stops succeeds', async () => {
-        const data = await MSC.Stop();
-        expect(data).toBeTruthy();
+    test('API exports exists', () => {
+        expect(MSC.Command).not.toBeNull();
+        expect(MSC.CommandType).not.toBeNull();
+        expect(MSC.log).not.toBeNull();
     })
-    
     test('GetState returns the right properties', async () => {
         const data = await MSC.GetState();
         expect(data).not.toBeNull();
@@ -27,14 +27,23 @@ describe('Basic tests', () => {
         expect(data).toHaveProperty('initializing');
         expect(data).toHaveProperty('batteryLevel');
     })
-    
     test('Initial state is not connected', async () => {
         const data = await MSC.GetState();
         expect(data.status).toBe(MSC.State.NOT_CONNECTED);
         expect(data.ready).toBeFalsy();
         expect(data.initializing).toBeFalsy();
     })
-    
+
+    test('Stops succeeds', async () => {
+        const result = await MSC.Stop();
+        expect(result).toBeTruthy();
+
+        const data = await MSC.GetState();
+        expect(data.status).toBe(MSC.State.NOT_CONNECTED);
+        expect(data.ready).toBeFalsy();
+        expect(data.initializing).toBeFalsy();
+    })
+        
     test('Pair fails (not in browser)', async () => {
         const result = await MSC.Pair();
         // Will fail without navigator object
