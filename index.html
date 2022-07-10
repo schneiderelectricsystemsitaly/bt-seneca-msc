@@ -250,13 +250,13 @@
             var mstate = await MSC.GetState();
             $("overall").text("ready:" + mstate.ready + ", initializing:" + mstate.initializing);
             $("status").text(mstate.status);
-            $("sp").text(dumpArray(mstate.lastSetpoint));
-            $("#meas").text(dumpArray(mstate.lastMeasure));
+            $("sp").html(dumpArray(mstate.lastSetpoint));
+            $("#meas").html(dumpArray(mstate.lastMeasure));
             $("#btinfo").text(mstate.deviceName);
             $("#serial").text(mstate.deviceSerial);
             $("#mode").text(mstate.deviceMode);
             $("#battery").text(mstate.batteryLevel);
-            $("#stats").text(dumpArray(mstate.stats));
+            $("#stats").html(dumpArray(mstate.stats));
             setTimeout(updateStatus, 500);
         }
         setTimeout(updateStatus, 500);
