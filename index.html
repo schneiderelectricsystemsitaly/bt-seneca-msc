@@ -7,140 +7,152 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Seneca MSC</title>
     <script src="./dist/bt-seneca-msc.js"></script>
+    <!-- CSS only -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
 </head>
 
 <body>
-    <style>
-        .columns {
-            Width: 100%;
-        }
-
-        .column {
-            width: 100%;
-        }
-
-        @media (min-width: 48em) {
-            .column {
-                width: 50%;
-                float: left;
-            }
-
-            .columns {
-                content: "";
-                display: table;
-                clear: both;
-            }
-        }
-    </style>
-    <h1>API COMMANDS</h1>
-    <table id="api" width="100%">
-        <tr>
-            <td><button id="startBt">Pair()</button></td>
-            <td>
-                <div id="resultPair"></div>
-            </td>
-            <td>Command type</td>
-            <td>
-                <select id="new_command_id">
-                </select>
-            </td>
-        </tr>
-        <tr>
-            <td><button id="stopBt">Stop()</button></td>
-            <td>
-                <div id="resultStop"></div>
-            </td>
-            <td>Setpoint</td>
-            <td><input type="number" id="new_command_sp" /></td>
-        </tr>
-        <tr>
-            <td><button id="testBtn">Test</button></td>
-            <td>
-                <div id="resultPair"></div>
-            </td>
-            <td>Add</td>
-            <td>
-                <input type="button" id="executeBtn" value="Execute(command)">
-                <div id="resultExecute"></div>
-            </td>
-        </tr>
-    </table>
-    <input type="button" id="traceBtn" value="Loglevel: debug" onclick="MSC.log.setLevel(MSC.log.levels.TRACE);">
-    <input type="button" id="defaultLog" value="Loglevel: info" onclick="MSC.log.setLevel(MSC.log.levels.INFO);">
-    <input type="button" id="defaultLog" value="Loglevel: default" onclick="MSC.log.setLevel(MSC.log.levels.WARN);">
-    <br />
-    </div>
-    <h1>GetState()</h1>
-    <div class="row">
-        <div class="column">
-            <table id="state" border="1">
-                <tr>
-                    <td>Status</td>
-                    <td>
-                        <div id="status"></div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Meter mode</td>
-                    <td>
-                        <div id="mode"></div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Last setpoint</td>
-                    <td>
-                        <div id="sp"></div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Last measure</td>
-                    <td>
-                        <div id="meas"></div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Bluetooth info</td>
-                    <td>
-                        <div id="btinfo"></div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Meter serial number</td>
-                    <td>
-                        <div id="serial"></div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Meter battery (V)</td>
-                    <td>
-                        <div id="battery"></div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Stats</td>
-                    <td>
-                        <div id="stats"></div>
-                    </td>
-                </tr>
-            </table>
+    <h2>API commands</h2>
+    <div class="container container-md">
+        <div class="row">
+            <div class="col">
+                <div class="container d-grid gap-3">
+                    <div class="row">
+                        <div class="col">
+                            <button id="startBt" class="btn btn-primary">Pair()</button>
+                        </div>
+                        <div class="col">
+                            <div id="resultPair"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <button id="stopBt" class="btn btn-primary">Stop()</button>
+                        </div>
+                        <div class="col">
+                            <div id="resultStop"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <button id="getState" class="btn btn-primary">GetState()</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="container d-grid gap-3">
+                    <div class="col">
+                        <div class="row">
+                            <label for="new_command_id">Command type</label>
+                            <select id="new_command_id" class="form-control"></select>
+                        </div>
+                        <div class="row">
+                            <label for="new_command_sp">Setpoint</label>
+                            <input type="number" id="new_command_sp" class="form-control" />
+                        </div>
+                        <div class="row">
+                            <input type="button" id="executeBtn" value="Execute(command)" class="btn btn-primary">
+                            <div id="resultExecute"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="container d-grid gap-3">
+                    <div class="row">
+                        <input type="button" id="traceBtn" value="Loglevel: debug"
+                            onclick="MSC.log.setLevel(MSC.log.levels.TRACE);" class="btn btn-info">
+                    </div>
+                    <div class="row">
+                        <input type="button" id="defaultLog" value="Loglevel: info"
+                            onclick="MSC.log.setLevel(MSC.log.levels.INFO);" class="btn btn-info">
+                    </div>
+                    <div class="row">
+                        <input type="button" id="defaultLog" value="Loglevel: default"
+                            onclick="MSC.log.setLevel(MSC.log.levels.WARN);" class="btn btn-info">
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="column">
-            <img src="./docs/msc.jpg" alt="Seneca MSC" />
+    </div>
+    <h2>GetState()</h2>
+    <div class="container">
+        <div class="row">
+            <div class="col col-md">
+                <table id="state" class="table table-striped">
+                    <tr>
+                        <td>Overall status</td>
+                        <td>
+                            <div id="overall"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Detailed status</td>
+                        <td>
+                            <div id="status"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Meter mode</td>
+                        <td>
+                            <div id="mode"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Last setpoint</td>
+                        <td>
+                            <div id="sp"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Last measure</td>
+                        <td>
+                            <div id="meas"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Bluetooth info</td>
+                        <td>
+                            <div id="btinfo"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Meter serial number</td>
+                        <td>
+                            <div id="serial"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Meter battery (V)</td>
+                        <td>
+                            <div id="battery"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Stats</td>
+                        <td>
+                            <div id="stats"></div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col col-sm">
+                <img src="./docs/msc.jpg" alt="Seneca MSC" width="400" />
+            </div>
         </div>
     </div>
     <script>
         document.getElementById("startBt").onclick = async () => {
             document.getElementById("resultPair").innerHTML = "Pending...";
             var res = await MSC.Pair();
-            document.getElementById("resultPair").innerHTML = "Result : " + res;
+            document.getElementById("resultPair").innerHTML = "Result PAIR: " + res;
         };
         document.getElementById("stopBt").onclick = async () => {
             document.getElementById("resultStop").innerHTML = "Pending...";
             var res = await MSC.Stop();
-            document.getElementById("resultStop").innerHTML = "Result : " + res;
-        };
-        document.getElementById("testBtn").onclick = async () => {
-            test();
+            document.getElementById("resultStop").innerHTML = "Result STOP: " + res;
         };
         document.getElementById("executeBtn").onclick = async () => {
             await addRequest();
@@ -151,7 +163,8 @@
             var opt = document.createElement('option');
             opt.value = MSC.CommandType[i];
             opt.innerHTML = i;
-            select.appendChild(opt);
+            if (!i.includes("RESERVED"))
+                select.appendChild(opt);
         }
 
         function dumpArray(arr) {
@@ -172,6 +185,7 @@
         }
         async function updateStatus() {
             var mstate = await MSC.GetState();
+            document.getElementById("overall").innerHTML = "canExecute:" + mstate.canExecute + ", initializing:" + mstate.initializing;
             document.getElementById("status").innerHTML = mstate.status;
             document.getElementById("sp").innerHTML = dumpArray(mstate.lastSetpoint);
             document.getElementById("meas").innerHTML = dumpArray(mstate.lastMeasure);
@@ -183,26 +197,6 @@
             setTimeout(updateStatus, 500);
         }
         setTimeout(updateStatus, 500);
-
-
-        var cycle = [[MSC.CommandType.V, 0], [MSC.CommandType.mV, 0], [MSC.CommandType.mA_active, 0],
-        [MSC.CommandType.mA_passive, 0], [MSC.CommandType.GEN_mV, 1], [MSC.CommandType.GEN_mV, 2],
-        [MSC.CommandType.GEN_mA_active, 0], [MSC.CommandType.GEN_mA_active, 4], [MSC.CommandType.GEN_mA_active, 12],
-        [MSC.CommandType.GEN_mA_active, 20], [MSC.CommandType.GEN_V, 0], [MSC.CommandType.GEN_V, 10]];
-
-        async function test() {
-            var len = cycle.length;
-            var idx = 0;
-            while (true) {
-                var com = new MSC.Command(cycle[idx][0], cycle[idx][1]);
-                var result = await MSC.Execute(com);
-                log.info("** Result:" + result);
-                console.assert(result.error == false);
-                idx++;
-                if (idx == len) idx = 0;
-                await sleep(10000);
-            }
-        }
 
         async function demo() {
             var command = new MSC.Command(MSC.CommandType.mV); // Read mV
@@ -233,9 +227,6 @@
                 console.log(sp); // Print the setpoint
             }
         }
-
-        
     </script>
 </body>
-
 </html>

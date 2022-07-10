@@ -316,6 +316,33 @@ const log = require("loglevel");
  * @returns {array} status of meter
  */
 async function GetState() {
+    let ready = false;
+    let initializing = false;
+    switch(btState.state) {
+        // States requiring user input
+        case State.ERROR:
+        case State.STOPPED:
+        case State.NOT_CONNECTED:
+            ready = false;
+            initializing = false;
+            break;
+        case State.BUSY:
+        case State.READY:
+            ready = true;
+            initializing = false;
+            break;
+        case State.CONNECTING:
+        case State.DEVICE_PAIRED:
+        case State.METER_INIT:
+        case State.METER_INITIALIZING:
+        case State.SUBSCRIBING:
+            initializing = true;
+            ready = false;
+            break;
+        default:
+            ready = false;
+            initializing = false;
+    }
     return {
         "lastSetpoint": btState.lastSetpoint,
         "lastMeasure": btState.lastMeasure,
@@ -324,7 +351,9 @@ async function GetState() {
         "stats": btState.stats,
         "deviceMode": btState.meter?.mode,
         "status": btState.state,
-        "batteryLevel": btState.meter?.battery
+        "batteryLevel": btState.meter?.battery,
+        "canExecute" : ready,
+        "initializing" : initializing
     };
 }
 
@@ -1785,7 +1814,7 @@ async function btPairDevice(forceSelection = true) {
     btState.state = State.CONNECTING;
 
     try {
-        if (typeof (navigator.bluetooth?.getAvailability) == "function") {
+        if (typeof (navigator.bluetooth?.getAvailability) == 'function') {
             const availability = await navigator.bluetooth.getAvailability();
             if (!availability) {
                 log.error("Bluetooth not available in browser.");
@@ -1795,7 +1824,7 @@ async function btPairDevice(forceSelection = true) {
         var device = null;
 
         // Do we already have permission?
-        if (typeof (navigator.bluetooth?.getDevices) == "function"
+        if (typeof (navigator.bluetooth?.getDevices) == 'function'
             && !forceSelection) {
             const availableDevices = await navigator.bluetooth.getDevices();
             availableDevices.forEach(function (dev, index) { if (dev.name.startsWith("MSC")) device = dev; });
@@ -1812,7 +1841,7 @@ async function btPairDevice(forceSelection = true) {
         btState.btDevice = device;
         btState.state = State.DEVICE_PAIRED;
         log.info("Bluetooth device " + device.name + " connected.");
-        await sleep(100);
+        await sleep(500);
     }
     catch (err) {
         log.warn("** error while connecting: " + err.message);
