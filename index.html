@@ -248,9 +248,9 @@
         }
         async function updateStatus() {
             var mstate = await MSC.GetState();
-            $("overall").text("ready:" + mstate.ready + ", initializing:" + mstate.initializing);
-            $("status").text(mstate.status);
-            $("sp").html(dumpArray(mstate.lastSetpoint));
+            $("#overall").text("ready:" + mstate.ready + ", initializing:" + mstate.initializing);
+            $("#status").text(mstate.status);
+            $("#sp").html(dumpArray(mstate.lastSetpoint));
             $("#meas").html(dumpArray(mstate.lastMeasure));
             $("#btinfo").text(mstate.deviceName);
             $("#serial").text(mstate.deviceSerial);
