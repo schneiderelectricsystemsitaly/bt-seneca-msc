@@ -33,14 +33,7 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | Pulses count generation       | Done and tested 1 kHz     | 2 Setpoints: LE and FE f (Hz) |
 | Load cell                     | Done *not tested*         | 1 Setpoint : Imbalance mV/V |
 
-| Settings | Implementation | Notes |
-| --- | --- | --- |
-| Low level for pulse/square wave generation | CommandType.SET_Ulow | Voltage 0-27 V (tested)
-| High level for pulse/square wave generation | CommandType.SET_Uhigh | Voltage 0-27 V (tested)
-| Minimum pulse width in microsec | CommandType.SET_Sensitivity_uS | Unknown range 1-??? uS *not tested*
-| Tension threshold for frequency/pulse measurement | CommandType.SET_UThreshold_F | Voltage 0-27 V *not tested*
-
-| Others | Status |
+| Others features | Status |
 | --- | --- |
 | Ramps editing          | Not implemented, not planned |
 | Ramps application      | Not implemented, not planned |
@@ -49,10 +42,15 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | Clock read/sync        | Not implemented |
 | Firmware version read  | Not implemented |
 | Battery level          | Read once at connection |
-| Setting of min us for pulses | Implemented (same threshold ON/OFF) |
-| Setting of cold junction compensation | Implemented  *not tested* |
-| Setting of min V for f measurement | Implemented *not tested* |
 | Conversion of mV/V to kg | Calculation not implemented |
+
+| Settings of measures/generation modes| Implementation | Notes |
+| --- | --- | --- |
+| Low level for pulse/square wave generation | CommandType.SET_Ulow | Voltage 0-27 V (tested)
+| High level for pulse/square wave generation | CommandType.SET_Uhigh | Voltage 0-27 V (tested)
+| Minimum pulse width in microsec | CommandType.SET_Sensitivity_uS | Unknown range 1-??? uS *not tested* same threshold for LE/FE
+| Tension threshold for frequency/pulse measurement | CommandType.SET_UThreshold_F | Voltage 0-27 V *not tested* 
+| Setting of cold junction compensation | CommandType.SET_ColdJunction |Implemented  *not tested* |
 
 ## How to build
 
@@ -153,38 +151,57 @@ In all cases, the workflow is the same.
 * Read example
 
 ```js
-var command = new MSC.Command(MSC.CommandType.mV); // Read mV
-var result = await MSC.Execute(command);
-if (result.error) {
-    // Something happened with command execution (device off, comm error...)
-    return;
-}
-var measure = await MSC.GetState().lastMeasure;
-if (measure.error) {
-    // Measure is not valid ; should retry 
+var state = await MSC.GetState();
+if (state.ready) {
+    var command = new MSC.Command(MSC.CommandType.mV); // Read mV
+    var result = await MSC.Execute(command);
+    if (result.error) {
+        // Something happened with command execution (device off, comm error...)
+        return;
+    }
+    var measure = await MSC.GetState().lastMeasure;
+    if (measure.error) {
+        // Measure is not valid ; should retry 
+    }
+    else {
+        console.log(measure); // Print the measurements
+    }
 }
 else {
-    console.log(measure); // Print the measurements
+    if (state.initializing) {
+        // Wait some more
+    } else {
+        // Not connected, ask the user to pair again
+    }
 }
 ```
 
-* Generation example
+* Generation example 
 
 ```js
-var command = new MSC.Command(MSC.CommandType.GEN_V, 5.2); // Generate 5.2 V
-var result = await MSC.Execute(command);
-if (result.error) {
-    // Something happened with command execution (device off, comm error...)
-    return;
-}
-var sp = MSC.GetState().lastSetpoint;
-if (sp.error) {
-    // Generation has error (e.g. short circuit, wrong connections...) 
+var state = await MSC.GetState();
+if (state.ready) {
+    var command = new MSC.Command(MSC.CommandType.GEN_V, 5.2); // Generate 5.2 V
+    var result = await MSC.Execute(command);
+    if (result.error) {
+        // Something happened with command execution (device off, comm error...)
+        return;
+    }
+    var sp = MSC.GetState().lastSetpoint;
+    if (sp.error) {
+        // Generation has error (e.g. short circuit, wrong connections...) 
+    }
+    else {
+        console.log(sp); // Print the setpoint
+    }
 }
 else {
-    console.log(sp); // Print the setpoint
+    if (state.initializing) {
+        // Wait some more
+    } else {
+        // Not connected, ask the user to pair again
+    }
 }
-
 ```
 
 * If another command is pending execution, Execute() will wait until completion.
@@ -207,6 +224,17 @@ const setpoints = command.defaultSetpoint();
 // Inspect setpoints array to get information about units, setpoint required...
 const howmany = Object.keys(setpoints).length;
 ```
+
+* Response times observed
+
+| Operation | Typical time observed | Notes
+| --- | --- | --- |
+| Pair the device | 20-40ss | It takes several tries to establish bluetooth characteristics
+| Execute generation | 2-3s | From command to device output
+| Execute measurement | 2-3s | From command to device reading
+| Refresh measurement | 1s | To get updated min/max/current values and error flag
+| Refresh generation stats | 1s | To get updated generation setpoint and error flag
+| Modbus roundtrip | approx 150ms | From command to answer
 
 ### Various
 
