@@ -29,9 +29,16 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | mA active/passive             | Done *basic testing*      | 1 Setpoint (mA) |
 | RTD 2W                        | Done *not tested*         | 1 Setpoint RTD °C |
 | Thermocouples                 | Done *not tested*         | 1 Setpoint °C value *no Cold junction* |
-| Frequency (square waves)      | Done and tested 0-10kHz   | 2 Setpoints: LE and FE f (Hz) *sensibility uV not set* |
-| Pulses count generation       | Done *not tested*         | 2 Setpoints: LE and FE f (Hz) *min-max levels not set* |
+| Frequency (square waves)      | Done and tested 0-10kHz   | 2 Setpoints: LE and FE f (Hz) |
+| Pulses count generation       | Done and tested 1 kHz     | 2 Setpoints: LE and FE f (Hz) |
 | Load cell                     | Done *not tested*         | 1 Setpoint : Imbalance mV/V |
+
+| Settings | Implementation | Notes |
+| --- | --- | --- |
+| Low level for pulse/square wave generation | CommandType.SET_Ulow | Voltage 0-27 V (tested)
+| High level for pulse/square wave generation | CommandType.SET_Uhigh | Voltage 0-27 V (tested)
+| Minimum pulse width in microsec | CommandType.SET_Sensitivity_uS | Unknown range 1-??? uS *not tested*
+| Tension threshold for frequency/pulse measurement | CommandType.SET_UThreshold_F | Voltage 0-27 V *not tested*
 
 | Others | Status |
 | --- | --- |

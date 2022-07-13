@@ -708,7 +708,9 @@ const CommandType = {
     SETTING_RESERVED: 1000,
     SET_UThreshold_F: 1001,
     SET_Sensitivity_uS: 1002,
-    SET_ColdJunction: 1003
+    SET_ColdJunction: 1003,
+    SET_Ulow: 1004,
+    SET_Uhigh: 1005,
 };
 
 /*
@@ -746,8 +748,11 @@ const MSCRegisters = {
     PulsesCount: 252,
     FrequencyTICK1: 254,
     FrequencyTICK2: 256,
-
+    GenUhighPerc: 262,
+    GenUlowPerc: 264
 };
+
+var MAX_U_GEN = 27.0; // maximum voltage 
 
 /*
  * Bluetooth constants
@@ -902,6 +907,10 @@ class Command {
                 return {'Sensibility (uS)' : 2.0 };
             case CommandType.SET_ColdJunction:
                 return {'Cold junction compensation': 0.0};
+            case CommandType.SET_Ulow:
+                return {'U low (V)': 0.0 / MAX_U_GEN};
+            case CommandType.SET_Uhigh:
+                return {'U high (V)': 5.0 / MAX_U_GEN};                                    
             default:
                 return {};
         }
@@ -1402,6 +1411,14 @@ function makeSetpointRequest(mode, setpoint) {
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.Sensibility_uS_OFF, [spInt[0], spInt[1], spInt[0], spInt[1]]); // uV for pulse train measurement to ON / OFF
         case CommandType.SET_ColdJunction:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ColdJunction, sp); // unclear unit
+        case CommandType.SET_Ulow:
+            setFloat32LEBS(dv, 0, setpoint / MAX_U_GEN); // Must convert V into a % 0..MAX_U_GEN
+            var sp2 = [dv.getUint16(0, false), dv.getUint16(2, false)];
+            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GenUlowPerc, sp2); // U low for freq / pulse gen
+        case CommandType.SET_Uhigh:
+            setFloat32LEBS(dv, 0, setpoint / MAX_U_GEN); // Must convert V into a % 0..MAX_U_GEN
+            var sp2 = [dv.getUint16(0, false), dv.getUint16(2, false)];
+            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GenUhighPerc, sp2); // U high for freq / pulse gen            
         default:
             throw new Error("Not handled");
     }
