@@ -1,4 +1,5 @@
-const MSC = require('bt-seneca-msc')
+const MSC = require('bt-seneca-msc');
+const { CommandType } = require('./meterApi');
 
 describe('Basic tests', () => {
     test('API functions exists', () => {
@@ -70,5 +71,23 @@ describe('Basic tests', () => {
         // Will stay pending since the state machine is not running
         expect(result.pending).toBeTruthy();
     })   
+
+    test('Command.getDefaultSetpoint works', async () => {
+        for(var ctype in CommandType) {
+            const command = new MSC.Command(ctype);
+            const info = command.defaultSetpoint();
+            expect(info).not.toBeNull();
+            const test = command.isGeneration() || command.isMeasurement() || command.isSetting() || !command.isValid();
+            expect(test).toBeTruthy();
+        }
+    })
+
+    test('Non-null refreshed properties', async () => {
+        const data = await MSC.GetState();
+        expect(data.lastMeasure).not.toBeNull();
+        expect(data.lastSetpoint).not.toBeNull();
+        expect(Array.isArray(data.lastMeasure)).toBeTruthy();
+        expect(Array.isArray(data.lastSetpoint)).toBeTruthy();
+    })
 })
 
