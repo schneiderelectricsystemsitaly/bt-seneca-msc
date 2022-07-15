@@ -220,10 +220,15 @@
         // Fill the command select items with available commands
         var select = $("#new_command_id");
         for (var i in MSC.CommandType) {
+            // Skip reserved commands
+            var cmd = new MSC.Command(i);
+            if (!cmd.isValid()) 
+                continue;
+
             var opt = $("<option>").val(MSC.CommandType[i]).text(i);
-            if (!i.includes("RESERVED"))
-                select.append(opt);
+            select.append(opt);
         }
+
         configureSetpoints($("#new_command_id").val());
 
         function dumpArray(arr) {
@@ -276,36 +281,6 @@
             setTimeout(updateStatus, 500);
         }
         setTimeout(updateStatus, 500);
-
-        async function demo() {
-            var command = new MSC.Command(MSC.CommandType.mV); // Read mV
-            var result = await MSC.Execute(command);
-            if (result.error) {
-                // Something happened with command execution (device off, comm error...)
-                return;
-            }
-            var measure = MSC.GetState().lastMeasure;
-            if (measure.error) {
-                // Measure is not valid ; should retry 
-            }
-            else {
-                console.log(measure); // Print the measurements
-            }
-
-            var command = new MSC.Command(MSC.CommandType.GEN_V, 5.2); // Generate 5.2 V
-            var result = await MSC.Execute(command);
-            if (result.error) {
-                // Something happened with command execution (device off, comm error...)
-                return;
-            }
-            var sp = await MSC.GetState().lastSetpoint;
-            if (sp.error) {
-                // Generation has error (e.g. short circuit, wrong connections...) 
-            }
-            else {
-                console.log(sp); // Print the setpoint
-            }
-        }
     </script>
 </body>
 
