@@ -151,7 +151,7 @@ In all cases, the workflow is the same.
 * Command class
 
 ```js
-var comm = new Command(CommandType.<function>, null|setpoint|[setpoint1, setpoint2])
+var comm = new MSC.Command(CommandType.<function>, null|setpoint|[setpoint1, setpoint2])
 comm.error // true if the Execute method has failed 
 comm.type  // type of the command
 comm.setpoint  // copy of setpoints
