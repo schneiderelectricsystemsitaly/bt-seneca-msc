@@ -41,7 +41,7 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | Logged data retrieval  | Not implemented, not planned |
 | Clock read/sync        | Not implemented |
 | Firmware version read  | Not implemented |
-| Battery level          | Read once at connection |
+| Battery level          | Read once after pairing |
 | Conversion of mV/V to kg | Calculation not implemented |
 
 | Settings of measures/generation modes| Implementation | Notes |
@@ -85,7 +85,7 @@ There are 4 operations available:
 ```js
 await MSC.Pair(); // bool - Pair to bluetooth
 await MSC.Stop(); // bool - Disconnect the bluetooth and stops the polling
-await MSC.Execute(MSC.Command); // bool - Execute command. If the device is not paired, an attempt will be made.
+await MSC.Execute(MSC.Command); // Execute command. If the device is not paired, an attempt will be made. Command is returned.
 await MSC.GetState(); // array - Get the current state
 ```
 
@@ -111,6 +111,8 @@ await MSC.GetState(); // array - Get the current state
 ```js
 
 var mstate = await MSC.GetState();
+mstate.ready          // The meter is ready to execute commands
+mstate.initializing   // The meter is initializing bluetooth
 mstate.status         // State machine internal status (Ready,Busy,Pairing,...)
 mstate.lastSetpoint   // Last executed generation function. Element at position 0 is the setpoint.
 mstate.lastMeasure    // Last measurement. Element at position 0 is the main measurement.
@@ -118,8 +120,6 @@ mstate.deviceName     // Name of the bluetooth device paired
 mstate.deviceSerial   // Serial number of the MSC device
 mstate.deviceMode     // Current mode of the MSC device (see CommandType values)
 mstate.stats          // Generic statistics, useful for debugging only.
-mstate.ready          // The meter is ready to execute commands
-mstate.initializing   // The meter is initializing bluetooth
 mstate.batteryLevel   // Internal battery level in Volts
 ```
 
@@ -148,28 +148,39 @@ Generations require one or more setpoint, depending on the specific function.
 
 In all cases, the workflow is the same.
 
+* Command class
+
+```js
+var comm = new Command(CommandType.<function>, null|setpoint|[setpoint1, setpoint2])
+comm.error // true if the Execute method has failed 
+comm.type  // type of the command
+comm.setpoint  // copy of setpoints
+comm.defaultSetpoint() // see below
+```
+
 * Read example
 
 ```js
 var state = await MSC.GetState();
-if (state.ready) {
-    var command = new MSC.Command(MSC.CommandType.mV); // Read mV
+if (state.ready) { // Check that the meter is ready
+    var command = new MSC.Command(MSC.CommandType.mV); // Read mV function
     var result = await MSC.Execute(command);
-    if (result.error) {
+    if (result.error) { // Check the error property of returned Command
         // Something happened with command execution (device off, comm error...)
         return;
     }
-    var measure = await MSC.GetState().lastMeasure;
-    if (measure.error) {
+    var measure = await MSC.GetState().lastMeasure; // This property will update approx. every second
+    if (measure.error) { // Meter is signalling an error with the measurement. E.g. overcurrent.
         // Measure is not valid ; should retry 
     }
     else {
         console.log(measure); // Print the measurements
+        // Note that the raw value will always be measure[0]
     }
 }
 else {
     if (state.initializing) {
-        // Wait some more
+        // Wait some more, the meter is connecting
     } else {
         // Not connected, ask the user to pair again
     }
@@ -204,16 +215,11 @@ else {
 }
 ```
 
-* If another command is pending execution, Execute() will wait until completion.
-
-* If the state machine is stopped, an attempt will be made to start the machine.
-
-* API will try to re-execute the command if communication breaks during execution (see internal states above).
-
+* If another command is pending execution, Execute() will wait until completion of the previous command.
+* If the state machine is stopped, an attempt will be made to start the machine. This may require to Pair the device and it will fail if Execute is not called from a user-gesture handling function in the browser.
+* API will try to re-execute the command if communication breaks during execution (see internal states above). 
 * The API will put the device in OFF state before writing setpoints (for safety), then apply the new mode settings after a slight delay.
-
 * For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter 1s after mode change.
-
 * To get the expected setpoints for a specific command type, use Command.defaultSetpoint(). This is used in the demo page in order to present to the user the right input boxes with meaningful descriptions.
 
 ```js
@@ -225,7 +231,7 @@ const setpoints = command.defaultSetpoint();
 const howmany = Object.keys(setpoints).length;
 ```
 
-* Response times observed
+### Response times observed
 
 | Operation | Typical time observed | Notes
 | --- | --- | --- |
@@ -236,78 +242,6 @@ const howmany = Object.keys(setpoints).length;
 | Refresh generation stats | 1s | To get updated generation setpoint and error flag
 | Modbus roundtrip | approx 150ms | From command to answer
 
-### Various
-
-* Command type int values
-
-```js
-const CommandType = {
-    mA_passive: 1,
-    mA_active: 2,
-    V: 3,
-    mV: 4,
-    THERMO_J: 5, 
-    THERMO_K: 6,
-    THERMO_T: 7,
-    THERMO_E: 8,
-    THERMO_L: 9,
-    THERMO_N: 10,
-    THERMO_R: 11,
-    THERMO_S: 12,
-    THERMO_B: 13,
-    PT100_2W: 14, 
-    PT100_3W: 15,
-    PT100_4W: 16,
-    PT500_2W: 17,
-    PT500_3W: 18,
-    PT500_4W: 19,
-    PT1000_2W: 20,
-    PT1000_3W: 21,
-    PT1000_4W: 22,
-    Cu50_2W: 23,
-    Cu50_3W: 24,
-    Cu50_4W: 25,
-    Cu100_2W: 26,
-    Cu100_3W: 27,
-    Cu100_4W: 28,
-    Ni100_2W: 29,
-    Ni100_3W: 30,
-    Ni100_4W: 31,
-    Ni120_2W: 32,
-    Ni120_3W: 33,
-    Ni120_4W: 34,
-    LoadCell: 35,   
-    Frequency: 36,  
-    PulseTrain: 37, 
-    OFF: 100, // ********* GENERATION AFTER THIS POINT *****************/
-    GEN_mA_passive: 101,
-    GEN_mA_active: 102,
-    GEN_V: 103,
-    GEN_mV: 104,
-    GEN_THERMO_J: 105,
-    GEN_THERMO_K: 106,
-    GEN_THERMO_T: 107,
-    GEN_THERMO_E: 108,
-    GEN_THERMO_L: 109,
-    GEN_THERMO_N: 110,
-    GEN_THERMO_R: 111,
-    GEN_THERMO_S: 112,
-    GEN_THERMO_B: 113,
-    GEN_PT100_2W: 114,
-    GEN_PT500_2W: 117,
-    GEN_PT1000_2W: 120,
-    GEN_Cu50_2W: 123,
-    GEN_Cu100_2W: 126,
-    GEN_Ni100_2W: 129,
-    GEN_Ni120_2W: 132,
-    GEN_LoadCell: 135,
-    GEN_Frequency: 136,
-    GEN_PulseTrain: 137,
-    SET_UThreshold_F: 1001,
-    SET_Sensitivity_uS: 1002,
-    SET_ColdJunction: 1003
-}
-```
 
 ## Branches & development info
 
