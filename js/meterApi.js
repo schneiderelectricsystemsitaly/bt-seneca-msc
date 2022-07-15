@@ -574,7 +574,7 @@ class Command {
         return this.ctype > Command.SETTING_RESERVED;
     }
     isValid() {
-        return this.isMeasurement() || this.isGeneration() || this.isSetting();
+        return (this.isMeasurement() || this.isGeneration() || this.isSetting());
     }
     /**
      * Gets the default setpoint for this command type

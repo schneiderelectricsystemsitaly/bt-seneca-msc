@@ -221,7 +221,7 @@
         var select = $("#new_command_id");
         for (var i in MSC.CommandType) {
             // Skip reserved commands
-            var cmd = new MSC.Command(i);
+            var cmd = new MSC.Command(MSC.CommandType[i]);
             if (!cmd.isValid()) 
                 continue;
 
