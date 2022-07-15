@@ -74,12 +74,19 @@ describe('Basic tests', () => {
 
     test('Command.getDefaultSetpoint works', async () => {
         for(var ctype in CommandType) {
-            const command = new MSC.Command(ctype);
+            const command = new MSC.Command(CommandType[ctype]);
             const info = command.defaultSetpoint();
             expect(info).not.toBeNull();
             const test = command.isGeneration() || command.isMeasurement() || command.isSetting() || !command.isValid();
             expect(test).toBeTruthy();
         }
+        var comm = new MSC.Command(MSC.CommandType.GEN_V);
+        expect(comm.isGeneration()).toBeTruthy();
+        comm = new MSC.Command(MSC.CommandType.mA_passive);
+        expect(comm.isMeasurement()).toBeTruthy();
+        comm = new MSC.Command(MSC.CommandType.SET_Ulow);
+        expect(comm.isSetting()).toBeTruthy();
+
     })
 
     test('Non-null refreshed properties', async () => {
