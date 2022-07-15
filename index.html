@@ -219,7 +219,7 @@
 
         // Fill the command select items with available commands
         var select = $("#new_command_id");
-        for (var i in MSC.CommandType) {
+        for (var i in MSC.CommandType) { // Will enumerate keys
             // Skip reserved commands
             var cmd = new MSC.Command(MSC.CommandType[i]);
             if (!cmd.isValid()) 

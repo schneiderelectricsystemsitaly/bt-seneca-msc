@@ -565,13 +565,13 @@ class Command {
     }
 
     isMeasurement() {
-        return this.ctype > CommandType.NONE_UNKNOWN && this.ctype < Command.RESERVED;
+        return this.ctype > CommandType.NONE_UNKNOWN && this.ctype < CommandType.RESERVED;
     }
     isGeneration() {
-        return this.ctype > CommandType.OFF && this.ctype < Command.SETTING_RESERVED;
+        return this.ctype > CommandType.OFF && this.ctype < CommandType.SETTING_RESERVED;
     }
     isSetting() {
-        return this.ctype > Command.SETTING_RESERVED;
+        return this.ctype > CommandType.SETTING_RESERVED;
     }
     isValid() {
         return (this.isMeasurement() || this.isGeneration() || this.isSetting());
