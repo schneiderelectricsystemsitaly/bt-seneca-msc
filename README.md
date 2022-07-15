@@ -2,9 +2,12 @@
 
 A pure Javascript API for the Seneca Multi Smart Calibrator device, using web bluetooth.
 
-It has minimal dependencies (one logger packages), implements modbus RTU FC3/FC16 functions and has been tested with a Seneca MSC device with firmware 1.0.44 ; tested on PC/Windows with Chrome and Edge. Source is Node.js but the distribution versions are CommonJS (browserified with a standalone MSC object).
+This package has only one logger package as dependency, it implements modbus RTU FC3/FC16 functions. The reason is that most modbus implementations I found are requiring Node.js environment, whereas my goal was to run in a pure browser environment.
+This oackage has been tested with a Seneca MSC device with firmware 1.0.44 ; testing was performed on PC/Windows with Chrome and Edge and Android Samsung S10 phone.
+The distribution versions are CommonJS (browserified with a standalone MSC object) ; examples below.
+This package can probably be adapted from Bluetooth to serial comm with little effort, but at the time I don't need it.
 
-A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
+* A sample application is available here: :point_right: https://pbrunot.github.io/bt-seneca-msc/ :point_left:
 
 ## Requirements and limitations
 
@@ -17,21 +20,21 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | V, mV readings                | Done and tested           | Only Instantaneous, min, max values (no avg) |
 | mA active/passive readings    | Done and tested           | Only Instantaneous, min, max values (no avg) |
 | RTD readings                  | Done and tested 2W        | Instantaneous RTD °C and Ohms values |
-| Thermocouples 2W/3W/4W read   | Done *not tested*         | Instantaneous °C value |
+| Thermocouples 2W/3W/4W read   | Done :grey_exclamation: *not tested*  | Instantaneous °C value |
 | Frequency reading             | Done and tested           | Frequency of leading and falling edges |
 | Pulse count reading           | Done and tested 0-10kHz   | Counts of leading and falling edges |
 | Frequency reading             | Done and tested           | Tested with square wave 0-10 kHz |
-| Load cell                     | Done *not tested*         | Imbalance mV/V |
+| Load cell                     | Done :grey_exclamation: *not tested* | Imbalance mV/V |
 
 | Generation | Implementation | Setpoint |
 | --- | --- | --- |
 | V, mV                         | Done and tested           | 1 Setpoint (mV/V) |
 | mA active/passive             | Done *basic testing*      | 1 Setpoint (mA) |
-| RTD 2W                        | Done *not tested*         | 1 Setpoint RTD °C |
-| Thermocouples                 | Done *not tested*         | 1 Setpoint °C value *no Cold junction* |
+| RTD 2W                        | Done :grey_exclamation: *not tested*  | 1 Setpoint RTD °C |
+| Thermocouples                 | Done :grey_exclamation: *not tested* | 1 Setpoint °C value *no Cold junction* |
 | Frequency (square waves)      | Done and tested 0-10kHz   | 2 Setpoints: LE and FE f (Hz) |
 | Pulses count generation       | Done and tested 1 kHz     | 2 Setpoints: LE and FE f (Hz) |
-| Load cell                     | Done *not tested*         | 1 Setpoint : Imbalance mV/V |
+| Load cell                     | Done :grey_exclamation: *not tested* | 1 Setpoint : Imbalance mV/V |
 
 | Others features | Status |
 | --- | --- |
@@ -41,8 +44,9 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | Logged data retrieval  | Not implemented, not planned |
 | Clock read/sync        | Not implemented |
 | Firmware version read  | Not implemented |
-| Battery level          | Read once after pairing |
+| Battery level          | Read once, after pairing |
 | Conversion of mV/V to kg | Calculation not implemented |
+| Automatic switch off delay | Not implemented |
 
 | Settings of measures/generation modes| Implementation | Notes |
 | --- | --- | --- |
@@ -167,7 +171,6 @@ if (state.ready) { // Check that the meter is ready
     var result = await MSC.Execute(command);
     if (result.error) { // Check the error property of returned Command
         // Something happened with command execution (device off, comm error...)
-        return;
     }
     var measure = await MSC.GetState().lastMeasure; // This property will update approx. every second
     if (measure.error) { // Meter is signalling an error with the measurement. E.g. overcurrent.
@@ -194,9 +197,8 @@ var state = await MSC.GetState();
 if (state.ready) {
     var command = new MSC.Command(MSC.CommandType.GEN_V, 5.2); // Generate 5.2 V
     var result = await MSC.Execute(command);
-    if (result.error) {
+    if (result.error) { // Check the error property of returned Command
         // Something happened with command execution (device off, comm error...)
-        return;
     }
     var sp = MSC.GetState().lastSetpoint;
     if (sp.error) {
@@ -212,6 +214,30 @@ else {
     } else {
         // Not connected, ask the user to pair again
     }
+}
+```
+
+* Generating 100 pulses of 50 ms each, with low = 0 V and high = 5 V
+
+```js
+// Assuming meter.ready
+
+var command1 = new MSC.Command(MSC.CommandType.SET_Ulow, 0.0); 
+var result1 = await MSC.Execute(command1);
+if (result1.error) { // Check the error property of returned Command
+    // Something happened with command execution (device off, comm error...)
+}
+var command2 = new MSC.Command(MSC.CommandType.SET_Uhigh, 5.0); 
+var result2 = await MSC.Execute(command2);
+if (result2.error) { // Check the error property of returned Command
+    // Something happened with command execution (device off, comm error...)
+}
+var command3 = new MSC.Command(MSC.CommandType.GEN_PulseTrain, [100, 1000/50]]); 
+var result3 = await MSC.Execute(command3);
+if (result3.error) { // Check the error property of returned Command
+    // Something happened with command execution (device off, comm error...)
+} else {
+    // MSC is now generating the pulses
 }
 ```
 
@@ -231,17 +257,16 @@ const setpoints = command.defaultSetpoint();
 const howmany = Object.keys(setpoints).length;
 ```
 
-### Response times observed
+### :alarm_clock: Response times observed
 
 | Operation | Typical time observed | Notes
 | --- | --- | --- |
-| Pair the device | 20-40ss | It takes several tries to establish bluetooth characteristics
+| Pair the device | 20-40s | It takes several tries to establish bluetooth characteristics
 | Execute generation | 2-3s | From command to device output
 | Execute measurement | 2-3s | From command to device reading
 | Refresh measurement | 1s | To get updated min/max/current values and error flag
 | Refresh generation stats | 1s | To get updated generation setpoint and error flag
 | Modbus roundtrip | approx 150ms | From command to answer
-
 
 ## Branches & development info
 
