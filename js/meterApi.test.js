@@ -15,7 +15,21 @@ describe('Basic tests', () => {
         expect(MSC.log).not.toBeNull();
     })
     test('GetState returns the right properties', async () => {
-        const data = await MSC.GetState();
+        let data = await MSC.GetState();
+        expect(data).not.toBeNull();
+        expect(data).toHaveProperty('status');
+        expect(data).toHaveProperty('lastSetpoint');
+        expect(data).toHaveProperty('lastMeasure');
+        expect(data).toHaveProperty('deviceName');
+        expect(data).toHaveProperty('deviceSerial');
+        expect(data).toHaveProperty('deviceMode');
+        expect(data).toHaveProperty('stats');
+        expect(data).toHaveProperty('ready');
+        expect(data).toHaveProperty('initializing');
+        expect(data).toHaveProperty('batteryLevel');
+
+        let datajson = await MSC.GetStateJSON();
+        data = JSON.parse(datajson);
         expect(data).not.toBeNull();
         expect(data).toHaveProperty('status');
         expect(data).toHaveProperty('lastSetpoint');
@@ -28,6 +42,7 @@ describe('Basic tests', () => {
         expect(data).toHaveProperty('initializing');
         expect(data).toHaveProperty('batteryLevel');
     })
+
     test('Initial state is not connected', async () => {
         const data = await MSC.GetState();
         expect(data.status).toBe(MSC.State.NOT_CONNECTED);
@@ -96,5 +111,24 @@ describe('Basic tests', () => {
         expect(Array.isArray(data.lastMeasure)).toBeTruthy();
         expect(Array.isArray(data.lastSetpoint)).toBeTruthy();
     })
+
+    test('JSON Execute works', async () => {
+        var comm = new MSC.Command(MSC.CommandType.GEN_V);
+        var setpoint = 5.0;
+        var result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm), JSON.stringify(setpoint)));
+        expect(result).toHaveProperty('error');
+        expect(result).toHaveProperty('pending');
+        expect(result.pending).toBeTruthy();
+
+        comm = new MSC.Command(MSC.CommandType.GEN_PulseTrain);
+        setpoint = [5,10];
+        result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm), JSON.stringify(setpoint)));
+
+        expect(result).toHaveProperty('error');
+        expect(result).toHaveProperty('pending');
+        expect(result.pending).toBeTruthy();
+
+        result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm), JSON.stringify(setpoint)));
+    });
 })
 
