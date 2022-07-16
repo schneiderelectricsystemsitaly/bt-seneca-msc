@@ -1376,27 +1376,23 @@ function makeSetpointRequest(mode, setpoint) {
         case CommandType.GEN_LoadCell:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.LoadCellSetpoint, sp); // mV/V setpoint
         case CommandType.GEN_Frequency:
-            dt = new ArrayBuffer(16); // 2 Uint32 + 2 Float
+            dt = new ArrayBuffer(8); // 2 Uint32
             dv = new DataView(dt);
+
             // See Senecal manual manual
             // Max 20kHZ gen
             TEMP = Math.round(20000 / setpoint, 0);
             dv.setUint32(0, Math.floor(TEMP / 2), false); // TICK1
             dv.setUint32(4, TEMP - Math.floor(TEMP / 2), false); // TICK2
-            setFloat32LEBS(dv, 8, 0.0); // LOW level
-            setFloat32LEBS(dv, 12, 0.37); // HIGH level (10V) 
 
             // Byte-swapped little endian
             registers = [dv.getUint16(2, false), dv.getUint16(0, false),
-            dv.getUint16(6, false), dv.getUint16(4, false)];
+                        dv.getUint16(6, false), dv.getUint16(4, false)];
 
-            // MIN-MAX levels not set
-            //    dv.getUint16(8, false), dv.getUint16(10, false),
-            //    dv.getUint16(12, false), dv.getUint16(14, false)];
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.FrequencyTICK1, registers);
 
         case CommandType.GEN_PulseTrain:
-            dt = new ArrayBuffer(20); // 3 Uint32 + 2 Float
+            dt = new ArrayBuffer(12); // 3 Uint32 
             dv = new DataView(dt);
 
             // See Senecal manual manual
@@ -1404,23 +1400,19 @@ function makeSetpointRequest(mode, setpoint) {
             TEMP = Math.round(20000 / setpoint[1], 0);
 
             dv.setUint32(0, setpoint[0], false); // NUM_PULSES
-
             dv.setUint32(4, Math.floor(TEMP / 2), false); // TICK1
             dv.setUint32(8, TEMP - Math.floor(TEMP / 2), false); // TICK2
-            setFloat32LEBS(dv, 12, 0.0); // LOW level
-            setFloat32LEBS(dv, 16, 0.37); // HIGH level (10V) 
 
             registers = [dv.getUint16(2, false), dv.getUint16(0, false),
-            dv.getUint16(6, false), dv.getUint16(4, false),
-            dv.getUint16(10, false), dv.getUint16(8, false)];
-            // MIN MAX LEVELS
-            //dv.getUint16(12, false), dv.getUint16(14, false),
-            //dv.getUint16(16, false), dv.getUint16(18, false)];
+                        dv.getUint16(6, false), dv.getUint16(4, false),
+                        dv.getUint16(10, false), dv.getUint16(8, false)];
+
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.PulsesCount, registers);
         case CommandType.SET_UThreshold_F:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ThresholdU_Freq, sp); // U min for freq measurement
         case CommandType.SET_Sensitivity_uS:
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.Sensibility_uS_OFF, [spInt[0], spInt[1], spInt[0], spInt[1]]); // uV for pulse train measurement to ON / OFF
+            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.Sensibility_uS_OFF,
+                 [spInt[0], spInt[1], spInt[0], spInt[1]]); // uV for pulse train measurement to ON / OFF
         case CommandType.SET_ColdJunction:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ColdJunction, sp); // unclear unit
         case CommandType.SET_Ulow:

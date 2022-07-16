@@ -72,7 +72,7 @@ describe('Basic tests', () => {
         expect(result.pending).toBeTruthy();
     })   
 
-    test('Command.getDefaultSetpoint works', async () => {
+    test('Command.getDefaultSetpoint and Command properties', async () => {
         for(var ctype in CommandType) {
             const command = new MSC.Command(CommandType[ctype]);
             const info = command.defaultSetpoint();
@@ -89,7 +89,7 @@ describe('Basic tests', () => {
 
     })
 
-    test('Non-null refreshed properties', async () => {
+    test('Non-null refreshed properties of GetState', async () => {
         const data = await MSC.GetState();
         expect(data.lastMeasure).not.toBeNull();
         expect(data.lastSetpoint).not.toBeNull();
