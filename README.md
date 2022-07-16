@@ -93,6 +93,14 @@ await MSC.Execute(MSC.Command); // Execute command. If the device is not paired,
 await MSC.GetState(); // array - Get the current state
 ```
 
+* JSON versions are available for ASPNET.core interop
+
+```js
+await MSC.ExecuteJSON(jsonCommand, jsonSetpoint); // Expects a json Command object and json setpoint (null, number or array of numbers)
+await MSC.GetStateJSON(); // returns a json array with the same properties as GetState()
+```
+
+
 ### Connecting to the meter
 
 * Call MSC.Pair() while handling a user gesture in the browser (i.e. button-click)
