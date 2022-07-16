@@ -370,7 +370,7 @@ async function GetStateJSON() {
  * @param {string} jsonCommand the command to execute
  * @returns {string} JSON command object
  */
- async function ExecuteJSON(jsonCommand) {
+async function ExecuteJSON(jsonCommand) {
     let command = JSON.parse(jsonCommand);
     return JSON.stringify(await Execute(command));
 }
@@ -1221,7 +1221,13 @@ function parseMeasure(responseFC3, mode) {
         case CommandType.THERMO_R:
         case CommandType.THERMO_S:
             meas = getFloat32LEBS(responseFC3, 0);
-            return { "Temperature (°C)": Math.round(meas * 100) / 100, "Timestamp": new Date() };
+            var value = Math.round(meas * 100) / 100
+            return {
+                "Temperature (°C)": value,
+                "Timestamp": new Date(),
+                "Unit": "°C",
+                "Value": value
+            };
         case CommandType.Cu50_2W:
         case CommandType.Cu50_3W:
         case CommandType.Cu50_4W:
@@ -1248,14 +1254,18 @@ function parseMeasure(responseFC3, mode) {
             return {
                 "Temperature RTD (°C)": Math.round(meas * 10) / 10,
                 "RTD (Ohms)": Math.round(meas2 * 10) / 10,
-                "Timestamp": new Date()
+                "Timestamp": new Date(),
+                "Unit": "°C",
+                "Value": Math.round(meas * 10) / 10
             };
         case CommandType.Frequency:
             meas = getFloat32LEBS(responseFC3, 0);
             // Sensibilità mancanti
             return {
                 "Frequency (Hz)": Math.round(meas * 10) / 10,
-                "Timestamp": new Date()
+                "Timestamp": new Date(),
+                "Unit": "Hz",
+                "Value": Math.round(meas * 10) / 10,
             };
         case CommandType.mA_active:
         case CommandType.mA_passive:
@@ -1266,6 +1276,8 @@ function parseMeasure(responseFC3, mode) {
                 "Current (mA)": Math.round(meas * 100) / 100,
                 "Min current (mA)": Math.round(min * 100) / 100,
                 "Max current (mA)": Math.round(max * 100) / 100,
+                "Unit": "mA",
+                "Value": Math.round(meas * 100) / 100,
                 "Timestamp": new Date()
             };
         case CommandType.V:
@@ -1276,6 +1288,8 @@ function parseMeasure(responseFC3, mode) {
                 "Voltage (V)": Math.round(meas * 100) / 100,
                 "Min voltage (V)": Math.round(min * 100) / 100,
                 "Max voltage (V)": Math.round(max * 100) / 100,
+                "Unit": "V",
+                "Value": Math.round(meas * 100) / 100,
                 "Timestamp": new Date()
             };
         case CommandType.mV:
@@ -1286,20 +1300,37 @@ function parseMeasure(responseFC3, mode) {
                 "Voltage (mV)": Math.round(meas * 100) / 100,
                 "Min voltage (mV)": Math.round(min * 100) / 100,
                 "Max voltage (mV)": Math.round(max * 100) / 100,
+                "Unit": "mV",
+                "Value": Math.round(meas * 100) / 100,
                 "Timestamp": new Date()
             };
         case CommandType.PulseTrain:
             meas = getUint32LEBS(responseFC3, 0);
             meas2 = getUint32LEBS(responseFC3, 4);
             // Soglia e sensibilità mancanti
-            return { "Pulse ON (#)": meas, "Pulse OFF (#)": meas2, "Timestamp": new Date() };
+            return {
+                "Pulse ON (#)": meas,
+                "Pulse OFF (#)": meas2,
+                "Timestamp": new Date(),
+                "Unit": "",
+                "Value": meas
+            };
         case CommandType.LoadCell:
             meas = Math.round(getFloat32LEBS(responseFC3, 0) * 1000) / 1000;
             // Kg mancanti
             // Sensibilità, tara, portata mancanti
-            return { "Imbalance (mV/V)": meas, "Timestamp": new Date() };
+            return {
+                "Imbalance (mV/V)": meas,
+                "Timestamp": new Date(),
+                "Unit": "mV/V",
+                "Value": meas
+            };
         default:
-            return { "Unknown": Math.round(meas * 1000) / 1000, "Timestamp": new Date() };
+            return {
+                "Value": Math.round(meas * 1000) / 1000,
+                "Timestamp": new Date(),
+                "Unit": ""
+            };
     }
 }
 
@@ -1405,7 +1436,7 @@ function makeSetpointRequest(mode, setpoint) {
 
             // Byte-swapped little endian
             registers = [dv.getUint16(2, false), dv.getUint16(0, false),
-                        dv.getUint16(6, false), dv.getUint16(4, false)];
+            dv.getUint16(6, false), dv.getUint16(4, false)];
 
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.FrequencyTICK1, registers);
 
@@ -1422,15 +1453,15 @@ function makeSetpointRequest(mode, setpoint) {
             dv.setUint32(8, TEMP - Math.floor(TEMP / 2), false); // TICK2
 
             registers = [dv.getUint16(2, false), dv.getUint16(0, false),
-                        dv.getUint16(6, false), dv.getUint16(4, false),
-                        dv.getUint16(10, false), dv.getUint16(8, false)];
+            dv.getUint16(6, false), dv.getUint16(4, false),
+            dv.getUint16(10, false), dv.getUint16(8, false)];
 
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.PulsesCount, registers);
         case CommandType.SET_UThreshold_F:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ThresholdU_Freq, sp); // U min for freq measurement
         case CommandType.SET_Sensitivity_uS:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.Sensibility_uS_OFF,
-                 [spInt[0], spInt[1], spInt[0], spInt[1]]); // uV for pulse train measurement to ON / OFF
+                [spInt[0], spInt[1], spInt[0], spInt[1]]); // uV for pulse train measurement to ON / OFF
         case CommandType.SET_ColdJunction:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ColdJunction, sp); // unclear unit
         case CommandType.SET_Ulow:
@@ -1503,13 +1534,33 @@ function parseSetpointRead(registers, mode) {
     switch (mode) {
         case CommandType.GEN_mA_active:
         case CommandType.GEN_mA_passive:
-            return { "Current (mA)": rounded, "Timestamp": new Date() };
+            return {
+                "Current (mA)": rounded,
+                "Timestamp": new Date(),
+                "Unit": "mA",
+                "Value": rounded
+            };
         case CommandType.GEN_V:
-            return { "Voltage (V)": rounded, "Timestamp": new Date() };
+            return {
+                "Voltage (V)": rounded,
+                "Timestamp": new Date(),
+                "Unit": "V",
+                "Value": rounded
+            };
         case CommandType.GEN_mV:
-            return { "Voltage (mV)": rounded, "Timestamp": new Date() };
+            return {
+                "Voltage (mV)": rounded,
+                "Timestamp": new Date(),
+                "Unit": "mV",
+                "Value": rounded
+            };
         case CommandType.GEN_LoadCell:
-            return { "Imbalance (mV/V)": rounded, "Timestamp": new Date() };
+            return {
+                "Imbalance (mV/V)": rounded,
+                "Timestamp": new Date(),
+                "Unit": "mV/V",
+                "Value": rounded
+            };
         case CommandType.GEN_Frequency:
         case CommandType.GEN_PulseTrain:
             var tick1 = getUint32LEBS(registers, 0);
@@ -1520,7 +1571,13 @@ function parseSetpointRead(registers, mode) {
                 fON = Math.round(1 / (tick1 * 2 / 20000.0), 0);
             if (tick2 != 0)
                 fOFF = Math.round(1 / (tick2 * 2 / 20000.0), 0);
-            return { "Frequency ON (Hz)": fON, "Frequency OFF (Hz)": fOFF, "Timestamp": new Date() };
+            return {
+                "Frequency ON (Hz)": fON,
+                "Frequency OFF (Hz)": fOFF,
+                "Timestamp": new Date(),
+                "Unit": "Hz",
+                "Value": fON
+            };
         case CommandType.GEN_Cu50_2W:
         case CommandType.GEN_Cu100_2W:
         case CommandType.GEN_Ni100_2W:
@@ -1537,9 +1594,14 @@ function parseSetpointRead(registers, mode) {
         case CommandType.GEN_THERMO_R:
         case CommandType.GEN_THERMO_S:
         case CommandType.GEN_THERMO_T:
-            return { "Temperature (°C)": rounded, "Timestamp": new Date() };
+            return {
+                "Temperature (°C)": rounded,
+                "Timestamp": new Date(),
+                "Unit": "°C",
+                "Value": rounded
+            };
         default:
-            return { "Value": rounded, "Timestamp": new Date() };
+            return { "Value": rounded, "Unit": "", "Timestamp": new Date() };
     }
 
 }
@@ -1740,7 +1802,7 @@ async function processCommand() {
                     break;
             } // switch
         } // if (command.isGeneration())
-        
+
         // Caller expects a valid property in GetState() once command is executed.
         await refresh();
 
