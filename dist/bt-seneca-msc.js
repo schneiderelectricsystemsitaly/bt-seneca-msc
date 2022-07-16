@@ -366,14 +366,13 @@ async function GetStateJSON() {
 }
 
 /**
- * 
- * @param {string} jsonCommand 
+ * Execute command with setpoints, JSON version
+ * @param {string} jsonCommand the command to execute
  * @returns {string} JSON command object
  */
- async function ExecuteJSON(jsonCommand, jsonSetpoint) {
+ async function ExecuteJSON(jsonCommand) {
     let command = JSON.parse(jsonCommand);
-    let setpoint = JSON.parse(jsonSetpoint);
-    return JSON.stringify(await Execute(command, setpoint));
+    return JSON.stringify(await Execute(command));
 }
 
 /**

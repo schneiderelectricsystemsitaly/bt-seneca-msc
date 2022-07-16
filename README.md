@@ -89,15 +89,15 @@ There are 4 operations available:
 ```js
 await MSC.Pair(); // bool - Pair to bluetooth
 await MSC.Stop(); // bool - Disconnect the bluetooth and stops the polling
-await MSC.Execute(MSC.Command); // Execute command. If the device is not paired, an attempt will be made. Command is returned.
+await MSC.Execute(MSC.Command); // Execute command. If the device is not paired, an attempt will be made. Command is returned with updated properties.
 await MSC.GetState(); // array - Get the current state
 ```
 
 * JSON versions are available for ASPNET.core interop
 
 ```js
-await MSC.ExecuteJSON(jsonCommand, jsonSetpoint); // Expects a json Command object and json setpoint (null, number or array of numbers)
-await MSC.GetStateJSON(); // returns a json array with the same properties as GetState()
+await MSC.ExecuteJSON(jsonCommand); // Expects a json string (Command) and returns a json string (update Command object)
+await MSC.GetStateJSON(); // returns a json string with the same properties as GetState()
 ```
 
 

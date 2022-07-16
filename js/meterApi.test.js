@@ -113,22 +113,24 @@ describe('Basic tests', () => {
     })
 
     test('JSON Execute works', async () => {
-        var comm = new MSC.Command(MSC.CommandType.GEN_V);
-        var setpoint = 5.0;
-        var result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm), JSON.stringify(setpoint)));
+        var comm = new MSC.Command(MSC.CommandType.GEN_V, 5.0);
+        var result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm)));
         expect(result).toHaveProperty('error');
         expect(result).toHaveProperty('pending');
+        expect(result).toHaveProperty('setpoint');
         expect(result.pending).toBeTruthy();
+        expect(result.setpoint).toBe(5.0);
 
-        comm = new MSC.Command(MSC.CommandType.GEN_PulseTrain);
-        setpoint = [5,10];
-        result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm), JSON.stringify(setpoint)));
+        comm = new MSC.Command(MSC.CommandType.GEN_PulseTrain, [5, 10]);
+        result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm)));
 
         expect(result).toHaveProperty('error');
         expect(result).toHaveProperty('pending');
+        expect(result).toHaveProperty('setpoint');
         expect(result.pending).toBeTruthy();
-
-        result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm), JSON.stringify(setpoint)));
+        expect(result.setpoint[0]).toBe(5);
+        expect(result.setpoint[1]).toBe(10);
+        
     });
 })
 
