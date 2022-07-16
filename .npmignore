@@ -1,1 +1,3 @@
-docs\*.mbp
+docs/*.mbp
+coverage/
+.github/

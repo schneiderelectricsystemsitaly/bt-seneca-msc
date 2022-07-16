@@ -2,9 +2,12 @@
 
 A pure Javascript API for the Seneca Multi Smart Calibrator device, using web bluetooth.
 
-It has minimal dependencies (one logger packages), implements modbus RTU FC3/FC16 functions and has been tested with a Seneca MSC device with firmware 1.0.44 ; tested on PC/Windows with Chrome and Edge. Source is Node.js but the distribution versions are CommonJS (browserified with a standalone MSC object).
+This package has only one logger package as dependency, it implements modbus RTU FC3/FC16 functions. The reason is that most modbus implementations I found are requiring Node.js environment, whereas my goal was to run in a pure browser environment.
+This oackage has been tested with a Seneca MSC device with firmware 1.0.44 ; testing was performed on PC/Windows with Chrome and Edge and Android Samsung S10 phone.
+The distribution versions are CommonJS (browserified with a standalone MSC object) ; examples below.
+This package can probably be adapted from Bluetooth to serial comm with little effort, but at the time I don't need it.
 
-A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
+* A sample application is available here: :point_right: https://pbrunot.github.io/bt-seneca-msc/ :point_left:
 
 ## Requirements and limitations
 
@@ -17,23 +20,23 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | V, mV readings                | Done and tested           | Only Instantaneous, min, max values (no avg) |
 | mA active/passive readings    | Done and tested           | Only Instantaneous, min, max values (no avg) |
 | RTD readings                  | Done and tested 2W        | Instantaneous RTD °C and Ohms values |
-| Thermocouples 2W/3W/4W read   | Done *not tested*         | Instantaneous °C value |
+| Thermocouples 2W/3W/4W read   | Done :grey_exclamation: *not tested*  | Instantaneous °C value |
 | Frequency reading             | Done and tested           | Frequency of leading and falling edges |
 | Pulse count reading           | Done and tested 0-10kHz   | Counts of leading and falling edges |
 | Frequency reading             | Done and tested           | Tested with square wave 0-10 kHz |
-| Load cell                     | Done *not tested*         | Imbalance mV/V |
+| Load cell                     | Done :grey_exclamation: *not tested* | Imbalance mV/V |
 
 | Generation | Implementation | Setpoint |
 | --- | --- | --- |
 | V, mV                         | Done and tested           | 1 Setpoint (mV/V) |
 | mA active/passive             | Done *basic testing*      | 1 Setpoint (mA) |
-| RTD 2W                        | Done *not tested*         | 1 Setpoint RTD °C |
-| Thermocouples                 | Done *not tested*         | 1 Setpoint °C value *no Cold junction* |
-| Frequency (square waves)      | Done and tested 0-10kHz   | 2 Setpoints: LE and FE f (Hz) *sensibility uV not set* |
-| Pulses count generation       | Done *not tested*         | 2 Setpoints: LE and FE f (Hz) *min-max levels not set* |
-| Load cell                     | Done *not tested*         | 1 Setpoint : Imbalance mV/V |
+| RTD 2W                        | Done :grey_exclamation: *not tested*  | 1 Setpoint RTD °C |
+| Thermocouples                 | Done :grey_exclamation: *not tested* | 1 Setpoint °C value *no Cold junction* |
+| Frequency (square waves)      | Done and tested 0-10kHz   | 2 Setpoints: LE and FE f (Hz) |
+| Pulses count generation       | Done and tested 1 kHz     | 2 Setpoints: LE and FE f (Hz) |
+| Load cell                     | Done :grey_exclamation: *not tested* | 1 Setpoint : Imbalance mV/V |
 
-| Others | Status |
+| Others features | Status |
 | --- | --- |
 | Ramps editing          | Not implemented, not planned |
 | Ramps application      | Not implemented, not planned |
@@ -41,11 +44,17 @@ A sample application is available here: https://pbrunot.github.io/bt-seneca-msc/
 | Logged data retrieval  | Not implemented, not planned |
 | Clock read/sync        | Not implemented |
 | Firmware version read  | Not implemented |
-| Battery level          | Read once at connection |
-| Setting of min us for pulses | Implemented (same threshold ON/OFF) |
-| Setting of cold junction compensation | Implemented  *not tested* |
-| Setting of min V for f measurement | Implemented *not tested* |
+| Battery level          | Read once, after pairing |
 | Conversion of mV/V to kg | Calculation not implemented |
+| Automatic switch off delay | Not implemented |
+
+| Settings of measures/generation modes| Implementation | Notes |
+| --- | --- | --- |
+| Low level for pulse/square wave generation | CommandType.SET_Ulow | Voltage 0-27 V (tested)
+| High level for pulse/square wave generation | CommandType.SET_Uhigh | Voltage 0-27 V (tested)
+| Minimum pulse width in microsec | CommandType.SET_Sensitivity_uS | Unknown range 1-??? uS *not tested* same threshold for LE/FE
+| Tension threshold for frequency/pulse measurement | CommandType.SET_UThreshold_F | Voltage 0-27 V *not tested* 
+| Setting of cold junction compensation | CommandType.SET_ColdJunction |Implemented  *not tested* |
 
 ## How to build
 
@@ -80,7 +89,7 @@ There are 4 operations available:
 ```js
 await MSC.Pair(); // bool - Pair to bluetooth
 await MSC.Stop(); // bool - Disconnect the bluetooth and stops the polling
-await MSC.Execute(MSC.Command); // bool - Execute command. If the device is not paired, an attempt will be made.
+await MSC.Execute(MSC.Command); // Execute command. If the device is not paired, an attempt will be made. Command is returned.
 await MSC.GetState(); // array - Get the current state
 ```
 
@@ -106,6 +115,8 @@ await MSC.GetState(); // array - Get the current state
 ```js
 
 var mstate = await MSC.GetState();
+mstate.ready          // The meter is ready to execute commands
+mstate.initializing   // The meter is initializing bluetooth
 mstate.status         // State machine internal status (Ready,Busy,Pairing,...)
 mstate.lastSetpoint   // Last executed generation function. Element at position 0 is the setpoint.
 mstate.lastMeasure    // Last measurement. Element at position 0 is the main measurement.
@@ -113,8 +124,6 @@ mstate.deviceName     // Name of the bluetooth device paired
 mstate.deviceSerial   // Serial number of the MSC device
 mstate.deviceMode     // Current mode of the MSC device (see CommandType values)
 mstate.stats          // Generic statistics, useful for debugging only.
-mstate.ready          // The meter is ready to execute commands
-mstate.initializing   // The meter is initializing bluetooth
 mstate.batteryLevel   // Internal battery level in Volts
 ```
 
@@ -143,125 +152,121 @@ Generations require one or more setpoint, depending on the specific function.
 
 In all cases, the workflow is the same.
 
+* Command class
+
+```js
+var comm = new MSC.Command(CommandType.<function>, null|setpoint|[setpoint1, setpoint2])
+comm.error // true if the Execute method has failed 
+comm.type  // type of the command
+comm.setpoint  // copy of setpoints
+comm.defaultSetpoint() // see below
+```
+
 * Read example
 
 ```js
-var command = new MSC.Command(MSC.CommandType.mV); // Read mV
-var result = await MSC.Execute(command);
-if (result.error) {
-    // Something happened with command execution (device off, comm error...)
-    return;
-}
-var measure = await MSC.GetState().lastMeasure;
-if (measure.error) {
-    // Measure is not valid ; should retry 
-}
-else {
-    console.log(measure); // Print the measurements
-}
-```
-
-* Generation example
-
-```js
-var command = new MSC.Command(MSC.CommandType.GEN_V, 5.2); // Generate 5.2 V
-var result = await MSC.Execute(command);
-if (result.error) {
-    // Something happened with command execution (device off, comm error...)
-    return;
-}
-var sp = MSC.GetState().lastSetpoint;
-if (sp.error) {
-    // Generation has error (e.g. short circuit, wrong connections...) 
+var state = await MSC.GetState();
+if (state.ready) { // Check that the meter is ready
+    var command = new MSC.Command(MSC.CommandType.mV); // Read mV function
+    var result = await MSC.Execute(command);
+    if (result.error) { // Check the error property of returned Command
+        // Something happened with command execution (device off, comm error...)
+    }
+    var measure = await MSC.GetState().lastMeasure; // This property will update approx. every second
+    if (measure.error) { // Meter is signalling an error with the measurement. E.g. overcurrent.
+        // Measure is not valid ; should retry 
+    }
+    else {
+        console.log(measure); // Print the measurements
+        // Note that the raw value will always be measure[0]
+    }
 }
 else {
-    console.log(sp); // Print the setpoint
+    if (state.initializing) {
+        // Wait some more, the meter is connecting
+    } else {
+        // Not connected, ask the user to pair again
+    }
 }
-
 ```
 
-* If another command is pending execution, Execute() will wait until completion.
-
-* If the state machine is stopped, an attempt will be made to start the machine.
-
-* API will try to re-execute the command if communication breaks during execution.
-
-* The API will put the device in OFF state before writing the setpoint for safety, then apply the new mode settings.
-
-* For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter.
-
-### Various
-
-* Command type int values
+* Generation example 
 
 ```js
-const CommandType = {
-    mA_passive: 1,
-    mA_active: 2,
-    V: 3,
-    mV: 4,
-    THERMO_J: 5, 
-    THERMO_K: 6,
-    THERMO_T: 7,
-    THERMO_E: 8,
-    THERMO_L: 9,
-    THERMO_N: 10,
-    THERMO_R: 11,
-    THERMO_S: 12,
-    THERMO_B: 13,
-    PT100_2W: 14, 
-    PT100_3W: 15,
-    PT100_4W: 16,
-    PT500_2W: 17,
-    PT500_3W: 18,
-    PT500_4W: 19,
-    PT1000_2W: 20,
-    PT1000_3W: 21,
-    PT1000_4W: 22,
-    Cu50_2W: 23,
-    Cu50_3W: 24,
-    Cu50_4W: 25,
-    Cu100_2W: 26,
-    Cu100_3W: 27,
-    Cu100_4W: 28,
-    Ni100_2W: 29,
-    Ni100_3W: 30,
-    Ni100_4W: 31,
-    Ni120_2W: 32,
-    Ni120_3W: 33,
-    Ni120_4W: 34,
-    LoadCell: 35,   
-    Frequency: 36,  
-    PulseTrain: 37, 
-    OFF: 100, // ********* GENERATION AFTER THIS POINT *****************/
-    GEN_mA_passive: 101,
-    GEN_mA_active: 102,
-    GEN_V: 103,
-    GEN_mV: 104,
-    GEN_THERMO_J: 105,
-    GEN_THERMO_K: 106,
-    GEN_THERMO_T: 107,
-    GEN_THERMO_E: 108,
-    GEN_THERMO_L: 109,
-    GEN_THERMO_N: 110,
-    GEN_THERMO_R: 111,
-    GEN_THERMO_S: 112,
-    GEN_THERMO_B: 113,
-    GEN_PT100_2W: 114,
-    GEN_PT500_2W: 117,
-    GEN_PT1000_2W: 120,
-    GEN_Cu50_2W: 123,
-    GEN_Cu100_2W: 126,
-    GEN_Ni100_2W: 129,
-    GEN_Ni120_2W: 132,
-    GEN_LoadCell: 135,
-    GEN_Frequency: 136,
-    GEN_PulseTrain: 137,
-    SET_UThreshold_F: 1001,
-    SET_Sensitivity_uS: 1002,
-    SET_ColdJunction: 1003
+var state = await MSC.GetState();
+if (state.ready) {
+    var command = new MSC.Command(MSC.CommandType.GEN_V, 5.2); // Generate 5.2 V
+    var result = await MSC.Execute(command);
+    if (result.error) { // Check the error property of returned Command
+        // Something happened with command execution (device off, comm error...)
+    }
+    var sp = MSC.GetState().lastSetpoint;
+    if (sp.error) {
+        // Generation has error (e.g. short circuit, wrong connections...) 
+    }
+    else {
+        console.log(sp); // Print the setpoint
+    }
+}
+else {
+    if (state.initializing) {
+        // Wait some more
+    } else {
+        // Not connected, ask the user to pair again
+    }
 }
 ```
+
+* Generating 100 pulses of 50 ms each, with low = 0 V and high = 5 V
+
+```js
+// Assuming meter.ready
+
+var command1 = new MSC.Command(MSC.CommandType.SET_Ulow, 0.0); 
+var result1 = await MSC.Execute(command1);
+if (result1.error) { // Check the error property of returned Command
+    // Something happened with command execution (device off, comm error...)
+}
+var command2 = new MSC.Command(MSC.CommandType.SET_Uhigh, 5.0); 
+var result2 = await MSC.Execute(command2);
+if (result2.error) { // Check the error property of returned Command
+    // Something happened with command execution (device off, comm error...)
+}
+var command3 = new MSC.Command(MSC.CommandType.GEN_PulseTrain, [100, 1000/50]]); 
+var result3 = await MSC.Execute(command3);
+if (result3.error) { // Check the error property of returned Command
+    // Something happened with command execution (device off, comm error...)
+} else {
+    // MSC is now generating the pulses
+}
+```
+
+* If another command is pending execution, Execute() will wait until completion of the previous command.
+* If the state machine is stopped, an attempt will be made to start the machine. This may require to Pair the device and it will fail if Execute is not called from a user-gesture handling function in the browser.
+* API will try to re-execute the command if communication breaks during execution (see internal states above). 
+* The API will put the device in OFF state before writing setpoints (for safety), then apply the new mode settings after a slight delay.
+* For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter 1s after mode change.
+* To get the expected setpoints for a specific command type, use Command.defaultSetpoint(). This is used in the demo page in order to present to the user the right input boxes with meaningful descriptions.
+
+```js
+// Create a temporary command
+const command = new MSC.Command(ctype);
+// Get the default setpoint for this command type
+const setpoints = command.defaultSetpoint();
+// Inspect setpoints array to get information about units, setpoint required...
+const howmany = Object.keys(setpoints).length;
+```
+
+### :alarm_clock: Response times observed
+
+| Operation | Typical time observed | Notes
+| --- | --- | --- |
+| Pair the device | 20-40s | It takes several tries to establish bluetooth characteristics
+| Execute generation | 2-3s | From command to device output
+| Execute measurement | 2-3s | From command to device reading
+| Refresh measurement | 1s | To get updated min/max/current values and error flag
+| Refresh generation stats | 1s | To get updated generation setpoint and error flag
+| Modbus roundtrip | approx 150ms | From command to answer
 
 ## Branches & development info
 
