@@ -807,8 +807,8 @@ class APIState {
 
         this.started = false; // State machine status
         this.stopRequest = false; // To request disconnect
-        this.lastMeasure = []; // Array with "MeasureName" : value
-        this.lastSetpoint = []; // Array with "SetpointType" : value
+        this.lastMeasure = {}; // Array with "MeasureName" : value
+        this.lastSetpoint = {}; // Array with "SetpointType" : value
 
         // state of connected meter
         this.meter = new MeterState();

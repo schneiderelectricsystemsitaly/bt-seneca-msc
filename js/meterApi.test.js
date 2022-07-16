@@ -108,8 +108,8 @@ describe('Basic tests', () => {
         const data = await MSC.GetState();
         expect(data.lastMeasure).not.toBeNull();
         expect(data.lastSetpoint).not.toBeNull();
-        expect(Array.isArray(data.lastMeasure)).toBeTruthy();
-        expect(Array.isArray(data.lastSetpoint)).toBeTruthy();
+        expect(typeof data.lastMeasure).toBe('object');
+        expect(typeof data.lastSetpoint).toBe('object');
     })
 
     test('JSON Execute works', async () => {
