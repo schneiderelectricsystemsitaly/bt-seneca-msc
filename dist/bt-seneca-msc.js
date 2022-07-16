@@ -852,11 +852,11 @@ class MeterState {
         this.battery = 0.0;
     }
 
-    isMeasuring() {
+    isMeasurement() {
         return this.mode > CommandType.NONE_UNKNOWN && this.mode < CommandType.OFF;
     }
 
-    isGenerating() {
+    isGeneration() {
         return this.mode > CommandType.OFF && this.mode < CommandType.GEN_RESERVED;
     }
 }
@@ -1668,7 +1668,7 @@ async function processCommand() {
         await sleep(100);
 
         // Now write the setpoint or setting
-        if (command.isGenerating() || command.isSetting()) {
+        if (command.isGeneration() || command.isSetting()) {
             log.debug("\t\tWriting setpoint :" + command.setpoint);
             response = await SendAndResponse(makeSetpointRequest(command.type, command.setpoint));
             if (!parseFC16checked(response, 0)) {
@@ -1739,7 +1739,7 @@ async function processCommand() {
                     }
                     break;
             } // switch
-        } // if (command.isGenerating())
+        } // if (command.isGeneration())
         
         // Caller expects a valid property in GetState() once command is executed.
         await refresh();
@@ -2024,7 +2024,7 @@ async function refresh() {
         if (mode != CommandType.NONE_UNKNOWN) {
             btState.meter.mode = mode;
 
-            if (btState.meter.isGenerating())
+            if (btState.meter.isGeneration())
                 await refreshGeneration();
             else
                 await refreshMeasure();
