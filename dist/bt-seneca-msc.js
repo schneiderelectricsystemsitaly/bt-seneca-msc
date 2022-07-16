@@ -346,7 +346,7 @@ async function GetState() {
     return {
         "lastSetpoint": btState.lastSetpoint,
         "lastMeasure": btState.lastMeasure,
-        "deviceName": btState.btDevice?.name,
+        "deviceName": btState.btDevice ? btState.btDevice.name : "",
         "deviceSerial": btState.meter?.serial,
         "stats": btState.stats,
         "deviceMode": btState.meter?.mode,
@@ -355,6 +355,25 @@ async function GetState() {
         "ready": ready,
         "initializing": initializing
     };
+}
+
+/**
+ * Provided for compatibility with Blazor
+ * @returns {string} JSON state object
+ */
+async function GetStateJSON() {
+    return JSON.stringify(await GetState());
+}
+
+/**
+ * 
+ * @param {string} jsonCommand 
+ * @returns {string} JSON command object
+ */
+ async function ExecuteJSON(jsonCommand, jsonSetpoint) {
+    let command = JSON.parse(jsonCommand);
+    let setpoint = JSON.parse(jsonSetpoint);
+    return JSON.stringify(await Execute(command, setpoint));
 }
 
 /**
@@ -2058,7 +2077,7 @@ async function refreshGeneration() {
  * */
 let btState = new APIState();
 
-module.exports = { Stop, Pair, Execute, GetState, State, CommandType, Command, Parse, log };
+module.exports = { Stop, Pair, Execute, GetState, State, CommandType, Command, Parse, log, GetStateJSON, ExecuteJSON };
 },{"loglevel":1}]},{},[2])(2)
 });
 
