@@ -836,7 +836,7 @@ class APIState {
             "commands": 0,
             "responseTime": 0.0,
             "lastResponseTime": 0.0,
-            "last_connect": new Date(2020, 1, 1)
+            "last_connect": new Date(2020, 1, 1).toISOString()
         };
     }
 }
@@ -1242,7 +1242,7 @@ function parseMeasure(responseFC3, mode) {
                 "Description": "Temperature",
                 "Value": value,
                 "Unit": "°C",
-                "Timestamp": new Date()
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.Cu50_2W:
         case CommandType.Cu50_3W:
@@ -1274,7 +1274,7 @@ function parseMeasure(responseFC3, mode) {
                 "SecondaryDescription": "Resistance",
                 "SecondaryValue": Math.round(meas2 * 10) / 10,
                 "SecondaryUnit": "Ohms",
-                "Timestamp": new Date(),
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.Frequency:
             meas = getFloat32LEBS(responseFC3, 0);
@@ -1283,7 +1283,7 @@ function parseMeasure(responseFC3, mode) {
                 "Description": "Frequency",
                 "Value": Math.round(meas * 10) / 10,
                 "Unit": "Hz",
-                "Timestamp": new Date()
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.mA_active:
         case CommandType.mA_passive:
@@ -1296,7 +1296,7 @@ function parseMeasure(responseFC3, mode) {
                 "Unit": "mA",
                 "Minimum": Math.round(min * 100) / 100,
                 "Maximum": Math.round(max * 100) / 100,
-                "Timestamp": new Date()
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.V:
             min = getFloat32LEBS(responseFC3, 0);
@@ -1308,7 +1308,7 @@ function parseMeasure(responseFC3, mode) {
                 "Unit": "V",
                 "Minimum": Math.round(min * 100) / 100,
                 "Maximum": Math.round(max * 100) / 100,
-                "Timestamp": new Date()
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.mV:
             min = getFloat32LEBS(responseFC3, 0);
@@ -1320,7 +1320,7 @@ function parseMeasure(responseFC3, mode) {
                 "Unit": "mV",
                 "Minimum": Math.round(min * 100) / 100,
                 "Maximum": Math.round(max * 100) / 100,
-                "Timestamp": new Date()
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.PulseTrain:
             meas = getUint32LEBS(responseFC3, 0);
@@ -1333,7 +1333,7 @@ function parseMeasure(responseFC3, mode) {
                 "SecondaryDescription": "Pulse OFF",
                 "SecondaryValue": meas2,
                 "SecondaryUnit": "",
-                "Timestamp": new Date()
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.LoadCell:
             meas = Math.round(getFloat32LEBS(responseFC3, 0) * 1000) / 1000;
@@ -1343,14 +1343,14 @@ function parseMeasure(responseFC3, mode) {
                 "Description": "Imbalance",
                 "Value": meas,
                 "Unit": "mV/V",
-                "Timestamp": new Date()
+                "Timestamp": new Date().toISOString()
             };
         default:
             return {
                 "Description": "Unknown",
                 "Value": Math.round(meas * 1000) / 1000,
                 "Unit": "?",
-                "Timestamp": new Date()
+                "Timestamp": new Date().toISOString()
             };
     }
 }
@@ -1556,31 +1556,31 @@ function parseSetpointRead(registers, mode) {
         case CommandType.GEN_mA_active:
         case CommandType.GEN_mA_passive:
             return {
-                "Current (mA)": rounded,
-                "Timestamp": new Date(),
+                "Description" : "Current",
+                "Value": rounded,
                 "Unit": "mA",
-                "Value": rounded
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.GEN_V:
             return {
                 "Description": "Voltage",
                 "Value": rounded,
                 "Unit": "V",
-                "Timestamp": new Date(),
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.GEN_mV:
             return {
                 "Description": "Voltage",
                 "Value": rounded,
                 "Unit": "mV",
-                "Timestamp": new Date()
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.GEN_LoadCell:
             return {
                 "Description": "Imbalance",
                 "Value": rounded,
                 "Unit": "mV/V",
-                "Timestamp": new Date()
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.GEN_Frequency:
         case CommandType.GEN_PulseTrain:
@@ -1599,7 +1599,7 @@ function parseSetpointRead(registers, mode) {
                 "SecondaryDescription": "Frequency OFF",
                 "SecondaryValue": fOFF,
                 "SecondaryUnit": "Hz",
-                "Timestamp": new Date()
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.GEN_Cu50_2W:
         case CommandType.GEN_Cu100_2W:
@@ -1621,14 +1621,14 @@ function parseSetpointRead(registers, mode) {
                 "Description": "Temperature",
                 "Value": rounded,
                 "Unit": "°C",
-                "Timestamp": new Date(),
+                "Timestamp": new Date().toISOString()
             };
         default:
             return {
                 "Description": "Unknown",
                 "Value": rounded,
                 "Unit": "?",
-                "Timestamp": new Date()
+                "Timestamp": new Date().toISOString()
             };
     }
 
@@ -2080,7 +2080,7 @@ async function btSubscribe() {
         btState.charRead.addEventListener('characteristicvaluechanged', handleNotifications);
         btState.charRead.startNotifications();
         log.info('> Bluetooth interfaces ready.');
-        btState.stats["last_connect"] = new Date();
+        btState.stats["last_connect"] = new Date().toISOString();
         await sleep(50);
         btState.state = State.METER_INIT;
     }
