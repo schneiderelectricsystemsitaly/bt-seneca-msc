@@ -429,6 +429,7 @@ const CommandType = {
     SET_ColdJunction: 1003,
     SET_Ulow: 1004,
     SET_Uhigh: 1005,
+    SET_ShutdownDelay: 1006
 };
 
 /*
@@ -448,6 +449,8 @@ const MSCRegisters = {
     MinMeasure: 132,
     MaxMeasure: 134,
     InstantMeasure: 136,
+    PowerOffDelay: 142,
+    PowerOffRemaining: 146,
     PulseOFFMeasure: 150,
     PulseONMeasure: 152,
     Sensibility_uS_OFF: 166,
@@ -562,8 +565,7 @@ class MeterState {
 }
 
 // These functions must exist stand-alone outside Command object as this object may come from JSON without them!
-function isGeneration(ctype)
-{
+function isGeneration(ctype) {
     return (ctype > CommandType.OFF && ctype < CommandType.GEN_RESERVED);
 }
 function isMeasurement(ctype) {
@@ -644,12 +646,13 @@ class Command {
                 return { 'U low (V)': 0.0 / MAX_U_GEN };
             case CommandType.SET_Uhigh:
                 return { 'U high (V)': 5.0 / MAX_U_GEN };
+            case CommandType.SET_ShutdownDelay:
+                return { 'Delay (s)': 60 * 5 };
             default:
                 return {};
         }
     }
-    isGeneration()
-    {
+    isGeneration() {
         return isGeneration(this.type);
     }
     isMeasurement() {
@@ -818,6 +821,7 @@ function parseCurrentMode(registers, currentMode) {
  */
 function makeModeRequest(mode) {
     const value = Parse(CommandType, mode);
+    const CHANGE_STATUS = 1;
 
     // Filter invalid commands
     if (value == null || value == CommandType.NONE_UNKNOWN) {
@@ -825,7 +829,7 @@ function makeModeRequest(mode) {
     }
 
     if (mode > CommandType.NONE_UNKNOWN && mode <= CommandType.OFF) { // Measurements
-        return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [1, mode]);
+        return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [CHANGE_STATUS, mode]);
     }
     else if (mode > CommandType.OFF && mode < CommandType.GEN_RESERVED) { // Generations
         switch (mode) {
@@ -839,7 +843,7 @@ function makeModeRequest(mode) {
             case CommandType.GEN_THERMO_S:
             case CommandType.GEN_THERMO_T:
                 // Cold junction not configured
-                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [1, mode]);
+                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [CHANGE_STATUS, mode]);
             case CommandType.GEN_Cu50_3W:
             case CommandType.GEN_Cu50_2W:
             case CommandType.GEN_Cu100_2W:
@@ -850,7 +854,7 @@ function makeModeRequest(mode) {
             case CommandType.GEN_PT1000_2W:
             default:
                 // All the simple cases 
-                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [1, mode]);
+                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [CHANGE_STATUS, mode]);
         }
 
     }
@@ -1193,6 +1197,8 @@ function makeSetpointRequest(mode, setpoint) {
             setFloat32LEBS(dv, 0, setpoint / MAX_U_GEN); // Must convert V into a % 0..MAX_U_GEN
             var sp2 = [dv.getUint16(0, false), dv.getUint16(2, false)];
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GenUhighPerc, sp2); // U high for freq / pulse gen            
+        case CommandType.SET_ShutdownDelay:
+            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.PowerOffDelay, setpoint); // delay in sec
         default:
             throw new Error("Not handled");
     }
@@ -1256,7 +1262,7 @@ function parseSetpointRead(registers, mode) {
         case CommandType.GEN_mA_active:
         case CommandType.GEN_mA_passive:
             return {
-                "Description" : "Current",
+                "Description": "Current",
                 "Value": rounded,
                 "Unit": "mA",
                 "Timestamp": new Date().toISOString()
@@ -1442,6 +1448,10 @@ async function processCommand() {
     try {
         var command = btState.command;
         var packet, response, startGen;
+        const RESET_POWER_OFF = 6;
+        const SET_POWER_OFF = 7;
+        const CLEAR_AVG_MIN_MAX = 5;
+        const PULSE_CMD = 9;
 
         if (command == null) {
             return;
@@ -1463,6 +1473,19 @@ async function processCommand() {
             response = await SendAndResponse(makeSetpointRequest(command.type, command.setpoint));
             if (!parseFC16checked(response, 0)) {
                 throw new Error("Setpoint not correctly written");
+            }
+            switch (command.type) {
+                case CommandType.SET_ShutdownDelay:
+                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [RESET_POWER_OFF]);
+                    response = await SendAndResponse(startGen);
+                    if (!parseFC16checked(response, 1)) {
+                        command.error = true;
+                        command.pending = false;
+                        throw new Error("Failure to set poweroff timer.");
+                    }
+                    break;
+                default:
+                    break;
             }
         }
 
@@ -1498,7 +1521,7 @@ async function processCommand() {
                     await sleep(1000);
                     // Reset the min/max/avg value
                     log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [5]);
+                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [CLEAR_AVG_MIN_MAX]);
                     response = await SendAndResponse(startGen);
                     if (!parseFC16checked(response, 1)) {
                         command.error = true;
@@ -1509,7 +1532,7 @@ async function processCommand() {
                 case CommandType.GEN_PulseTrain:
                     await sleep(1000);
                     log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [9, 2]); // Start with low
+                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [PULSE_CMD, 2]); // Start with low
                     response = await SendAndResponse(startGen);
                     if (!parseFC16checked(response, 2)) {
                         command.error = true;
@@ -1520,7 +1543,7 @@ async function processCommand() {
                 case CommandType.GEN_Frequency:
                     await sleep(1000);
                     log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [9, 1]); // start gen
+                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [PULSE_CMD, 1]); // start gen
                     response = await SendAndResponse(startGen);
                     if (!parseFC16checked(response, 2)) {
                         command.error = true;
@@ -1531,9 +1554,13 @@ async function processCommand() {
             } // switch
         } // if (!isSetting(command.type) && isValid(command.type)))
 
+        // Disable auto power off
+        startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [RESET_POWER_OFF]);
+        response = await SendAndResponse(startGen);
+
         // Caller expects a valid property in GetState() once command is executed.
         await refresh();
-
+        
         command.error = false;
         command.pending = false;
 
@@ -1575,7 +1602,7 @@ async function SendAndResponse(command) {
 
     var endTime = new Date().getTime();
 
-    var answer = btState.response.slice();
+    var answer = btState.response?.slice();
     btState.response = null;
 
     btState.stats["responseTime"] = Math.round((1.0 * btState.stats["responseTime"] * (btState.stats["responses"] % 500) + (endTime - startTime)) / ((btState.stats["responses"] % 500) + 1));
