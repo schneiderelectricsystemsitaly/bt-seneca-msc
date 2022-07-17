@@ -99,7 +99,7 @@ async function Execute(command) {
     // Start the regular state machine
     if (!btState.started) {
         btState.state = State.NOT_CONNECTED;
-        stateMachine();
+        await stateMachine();
     }
 
     // Wait for completion of the command, or halt of the state machine
@@ -135,9 +135,15 @@ async function Stop() {
     log.info("Stop request received");
 
     btState.stopRequest = true;
-    await waitFor(() => !btState.started);
-    btState.stopRequest = false;
+    await sleep(100);
 
+    while(btState.started || (btState.state != State.STOPPED && btState.state != State.NOT_CONNECTED))
+    {
+        btState.stopRequest = true;    
+        await sleep(100);
+    }
+
+    btState.stopRequest = false;
     log.warn("Stopped on request.");
     return true;
 }
@@ -1199,6 +1205,8 @@ function makeSetpointRequest(mode, setpoint) {
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GenUhighPerc, sp2); // U high for freq / pulse gen            
         case CommandType.SET_ShutdownDelay:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.PowerOffDelay, setpoint); // delay in sec
+        case CommandType.OFF:
+            return null; // No setpoint
         default:
             throw new Error("Not handled");
     }
@@ -1364,9 +1372,9 @@ async function stateMachine() {
     // Stop request from API
     if (btState.stopRequest) {
         btState.state = State.STOPPING;
-        btState.stopRequest = false;
     }
-
+    
+    log.debug("\State:" + btState.state);
     switch (btState.state) {
         case State.NOT_CONNECTED: // initial state on Start()
             nextAction = btPairDevice;
@@ -1431,12 +1439,20 @@ async function stateMachine() {
 
     if (nextAction != undefined) {
         log.debug("\tExecuting:" + nextAction.name);
-        nextAction();
+        try
+        {
+            await nextAction();
+        }
+        catch(e) 
+        {
+            log.error("Exception in state machine", e);
+        }
     }
     if (btState.state != State.STOPPED) {
         sleep(DELAY_MS).then(() => stateMachine()); // Recheck status in DELAY_MS ms
     }
     else {
+        log.debug("\tTerminating State machine");
         btState.started = false;
     }
 }
@@ -1468,10 +1484,10 @@ async function processCommand() {
         await sleep(100);
 
         // Now write the setpoint or setting
-        if (isGeneration(command.type) || isSetting(command.type)) {
+        if (isGeneration(command.type) || isSetting(command.type) && command.type != CommandType.OFF) {
             log.debug("\t\tWriting setpoint :" + command.setpoint);
             response = await SendAndResponse(makeSetpointRequest(command.type, command.setpoint));
-            if (!parseFC16checked(response, 0)) {
+            if (response !=null && !parseFC16checked(response, 0)) {
                 throw new Error("Setpoint not correctly written");
             }
             switch (command.type) {
@@ -1489,7 +1505,7 @@ async function processCommand() {
             }
         }
 
-        if (!isSetting(command.type) && isValid(command.type))  // IF this is a setting, we're done.
+        if (!isSetting(command.type) && isValid(command.type) && command.type != CommandType.OFF)  // IF this is a setting, we're done.
         {
             // Now write the mode set 
             log.debug("\t\tSetting new mode :" + command.type);
@@ -1552,20 +1568,24 @@ async function processCommand() {
                     }
                     break;
             } // switch
+            
+            // Disable auto power off
+            log.debug("\t\tDisabling power off");
+            startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [RESET_POWER_OFF]);
+            response = await SendAndResponse(startGen);
+
         } // if (!isSetting(command.type) && isValid(command.type)))
 
-        // Disable auto power off
-        startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [RESET_POWER_OFF]);
-        response = await SendAndResponse(startGen);
-
-        // Caller expects a valid property in GetState() once command is executed.
-        await refresh();
-        
         command.error = false;
         command.pending = false;
-
         btState.command = null;
+
+        // Caller expects a valid property in GetState() once command is executed.
+        log.debug("\t\tRefreshing current state");
+        await refresh();
+        
         btState.state = State.IDLE;
+        log.debug("\t\tCompleted command executed");
     }
     catch (err) {
         log.error("** error while executing command: " + err);
@@ -1843,9 +1863,11 @@ async function refresh() {
 
             if (btState.meter.isGeneration())
                 await refreshGeneration();
-            else
+            
+            if (btState.meter.isMeasurement())
                 await refreshMeasure();
         }
+        log.debug("\t\tFinished refreshing current state");
         btState.state = State.IDLE;
     }
     catch (err) {

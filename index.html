@@ -161,7 +161,11 @@
         });
         $("#stopBt").click(async () => {
             $("#resultStop").text("Pending...");
-            var stop = await MSC.Execute(new MSC.Command(MSC.CommandType.OFF)); // Stop the meter first
+            var state = await MSC.GetState();
+            
+            if (state.ready)
+                var stop = await MSC.Execute(new MSC.Command(MSC.CommandType.OFF)); // Stop the meter first
+            
             var res = await MSC.Stop(); // Then close interface
             $("#resultStop").text("Result STOP: " + res);
         });

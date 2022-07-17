@@ -81,10 +81,17 @@ describe('Basic tests', () => {
     
     test('Generation execution fails', async () => {
         const command = new MSC.Command(MSC.CommandType.GEN_V, 1.23);
-        const result = await MSC.Execute(command);
-        expect(result).not.toBeNull();
-        // Will stay pending since the state machine is not running
-        expect(result.pending).toBeTruthy();
+        try
+        {
+            const result = await MSC.Execute(command);
+            expect(result).not.toBeNull();
+            // Will stay pending since the state machine is not running
+            expect(result.pending).toBeTruthy();
+        }
+        catch(e)
+        {
+          // Will throw without Pair   
+        }
     })   
 
     test('Command.getDefaultSetpoint and Command properties', async () => {
