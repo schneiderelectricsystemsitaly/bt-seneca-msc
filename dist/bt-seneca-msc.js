@@ -861,6 +861,21 @@ class MeterState {
     }
 }
 
+// These functions must exist stand-alone outside Command object as this object may come from JSON without them!
+function isGeneration(ctype)
+{
+    return (ctype > CommandType.OFF && ctype < CommandType.GEN_RESERVED);
+}
+function isMeasurement(ctype) {
+    return (ctype > CommandType.NONE_UNKNOWN && ctype < CommandType.RESERVED);
+}
+function isSetting(ctype) {
+    return (ctype > CommandType.SETTING_RESERVED);
+}
+function isValid(ctype) {
+    return (isMeasurement(ctype) || isGeneration(ctype) || isSetting(ctype));
+}
+
 /**
  * Command to the meter, may include setpoint
  * */
@@ -882,18 +897,6 @@ class Command {
         return "Type: " + Parse(CommandType, this.type) + ", setpoint:" + this.setpoint + ", pending:" + this.pending + ", error:" + this.error;
     }
 
-    isMeasurement() {
-        return (this.type > CommandType.NONE_UNKNOWN && this.type < CommandType.RESERVED);
-    }
-    isGeneration() {
-        return (this.type > CommandType.OFF && this.type < CommandType.GEN_RESERVED);
-    }
-    isSetting() {
-        return (this.type > CommandType.SETTING_RESERVED);
-    }
-    isValid() {
-        return (this.isMeasurement() || this.isGeneration() || this.isSetting());
-    }
     /**
      * Gets the default setpoint for this command type
      * @returns {Array} setpoint(s) expected
@@ -944,6 +947,19 @@ class Command {
             default:
                 return {};
         }
+    }
+    isGeneration()
+    {
+        return isGeneration(this.type);
+    }
+    isMeasurement() {
+        return isMeasurement(this.type);
+    }
+    isSetting() {
+        return isSetting(this.type);
+    }
+    isValid() {
+        return (isMeasurement(this.type) || isGeneration(this.type) || isSetting(this.type));
     }
 }
 
@@ -1742,7 +1758,7 @@ async function processCommand() {
         await sleep(100);
 
         // Now write the setpoint or setting
-        if (command.isGeneration() || command.isSetting()) {
+        if (isGeneration(command.type) || isSetting(command.type)) {
             log.debug("\t\tWriting setpoint :" + command.setpoint);
             response = await SendAndResponse(makeSetpointRequest(command.type, command.setpoint));
             if (!parseFC16checked(response, 0)) {
@@ -1750,7 +1766,7 @@ async function processCommand() {
             }
         }
 
-        if (!command.isSetting())  // IF this is a setting, we're done.
+        if (!isSetting(command.type))  // IF this is a setting, we're done.
         {
             // Now write the mode set 
             log.debug("\t\tSetting new mode :" + command.type);
