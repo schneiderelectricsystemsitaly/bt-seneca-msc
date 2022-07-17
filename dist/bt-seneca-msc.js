@@ -1223,10 +1223,10 @@ function parseMeasure(responseFC3, mode) {
             meas = getFloat32LEBS(responseFC3, 0);
             var value = Math.round(meas * 100) / 100
             return {
-                "Temperature (°C)": value,
-                "Timestamp": new Date(),
+                "Description": "Temperature",
+                "Value": value,
                 "Unit": "°C",
-                "Value": value
+                "Timestamp": new Date()
             };
         case CommandType.Cu50_2W:
         case CommandType.Cu50_3W:
@@ -1252,20 +1252,22 @@ function parseMeasure(responseFC3, mode) {
             meas = getFloat32LEBS(responseFC3, 0);
             meas2 = getFloat32LEBS(responseFC3, 4);
             return {
-                "Temperature RTD (°C)": Math.round(meas * 10) / 10,
-                "RTD (Ohms)": Math.round(meas2 * 10) / 10,
-                "Timestamp": new Date(),
+                "Description": "Temperature",
+                "Value": Math.round(meas * 10) / 10,
                 "Unit": "°C",
-                "Value": Math.round(meas * 10) / 10
+                "SecondaryDescription": "Resistance",
+                "SecondaryValue": Math.round(meas2 * 10) / 10,
+                "SecondaryUnit": "Ohms",
+                "Timestamp": new Date(),
             };
         case CommandType.Frequency:
             meas = getFloat32LEBS(responseFC3, 0);
             // Sensibilità mancanti
             return {
-                "Frequency (Hz)": Math.round(meas * 10) / 10,
-                "Timestamp": new Date(),
-                "Unit": "Hz",
+                "Description": "Frequency",
                 "Value": Math.round(meas * 10) / 10,
+                "Unit": "Hz",
+                "Timestamp": new Date()
             };
         case CommandType.mA_active:
         case CommandType.mA_passive:
@@ -1273,11 +1275,11 @@ function parseMeasure(responseFC3, mode) {
             max = getFloat32LEBS(responseFC3, 4);
             meas = getFloat32LEBS(responseFC3, 8);
             return {
-                "Current (mA)": Math.round(meas * 100) / 100,
-                "Min current (mA)": Math.round(min * 100) / 100,
-                "Max current (mA)": Math.round(max * 100) / 100,
-                "Unit": "mA",
+                "Description": "Current",
                 "Value": Math.round(meas * 100) / 100,
+                "Unit": "mA",
+                "Mininum": Math.round(min * 100) / 100,
+                "Maximum": Math.round(max * 100) / 100,
                 "Timestamp": new Date()
             };
         case CommandType.V:
@@ -1285,11 +1287,11 @@ function parseMeasure(responseFC3, mode) {
             max = getFloat32LEBS(responseFC3, 4);
             meas = getFloat32LEBS(responseFC3, 8);
             return {
-                "Voltage (V)": Math.round(meas * 100) / 100,
-                "Min voltage (V)": Math.round(min * 100) / 100,
-                "Max voltage (V)": Math.round(max * 100) / 100,
-                "Unit": "V",
+                "Description": "Voltage",
                 "Value": Math.round(meas * 100) / 100,
+                "Unit": "V",
+                "Mininum": Math.round(min * 100) / 100,
+                "Maximum": Math.round(max * 100) / 100,
                 "Timestamp": new Date()
             };
         case CommandType.mV:
@@ -1297,11 +1299,11 @@ function parseMeasure(responseFC3, mode) {
             max = getFloat32LEBS(responseFC3, 4);
             meas = getFloat32LEBS(responseFC3, 8);
             return {
-                "Voltage (mV)": Math.round(meas * 100) / 100,
-                "Min voltage (mV)": Math.round(min * 100) / 100,
-                "Max voltage (mV)": Math.round(max * 100) / 100,
-                "Unit": "mV",
+                "Description": "Voltage",
                 "Value": Math.round(meas * 100) / 100,
+                "Unit": "mV",
+                "Mininum": Math.round(min * 100) / 100,
+                "Maximum": Math.round(max * 100) / 100,
                 "Timestamp": new Date()
             };
         case CommandType.PulseTrain:
@@ -1309,27 +1311,30 @@ function parseMeasure(responseFC3, mode) {
             meas2 = getUint32LEBS(responseFC3, 4);
             // Soglia e sensibilità mancanti
             return {
-                "Pulse ON (#)": meas,
-                "Pulse OFF (#)": meas2,
-                "Timestamp": new Date(),
+                "Description": "Pulse ON",
+                "Value": meas,
                 "Unit": "",
-                "Value": meas
+                "SecondaryDescription": "Pulse OFF",
+                "SecondaryValue": meas2,
+                "SecondaryUnit": "",
+                "Timestamp": new Date()
             };
         case CommandType.LoadCell:
             meas = Math.round(getFloat32LEBS(responseFC3, 0) * 1000) / 1000;
             // Kg mancanti
             // Sensibilità, tara, portata mancanti
             return {
-                "Imbalance (mV/V)": meas,
-                "Timestamp": new Date(),
+                "Description": "Imbalance",
+                "Value": meas,
                 "Unit": "mV/V",
-                "Value": meas
+                "Timestamp": new Date()
             };
         default:
             return {
+                "Description": "Unknown",
                 "Value": Math.round(meas * 1000) / 1000,
-                "Timestamp": new Date(),
-                "Unit": ""
+                "Unit": "?",
+                "Timestamp": new Date()
             };
     }
 }
@@ -1542,24 +1547,24 @@ function parseSetpointRead(registers, mode) {
             };
         case CommandType.GEN_V:
             return {
-                "Voltage (V)": rounded,
-                "Timestamp": new Date(),
+                "Description": "Voltage",
+                "Value": rounded,
                 "Unit": "V",
-                "Value": rounded
+                "Timestamp": new Date(),
             };
         case CommandType.GEN_mV:
             return {
-                "Voltage (mV)": rounded,
-                "Timestamp": new Date(),
+                "Description": "Voltage",
+                "Value": rounded,
                 "Unit": "mV",
-                "Value": rounded
+                "Timestamp": new Date()
             };
         case CommandType.GEN_LoadCell:
             return {
-                "Imbalance (mV/V)": rounded,
-                "Timestamp": new Date(),
+                "Description": "Imbalance",
+                "Value": rounded,
                 "Unit": "mV/V",
-                "Value": rounded
+                "Timestamp": new Date()
             };
         case CommandType.GEN_Frequency:
         case CommandType.GEN_PulseTrain:
@@ -1572,11 +1577,13 @@ function parseSetpointRead(registers, mode) {
             if (tick2 != 0)
                 fOFF = Math.round(1 / (tick2 * 2 / 20000.0), 0);
             return {
-                "Frequency ON (Hz)": fON,
-                "Frequency OFF (Hz)": fOFF,
-                "Timestamp": new Date(),
+                "Description": "Frequency ON",
+                "Value": fON,
                 "Unit": "Hz",
-                "Value": fON
+                "SecondaryDescription": "Frequency OFF",
+                "SecondaryValue": fOFF,
+                "SecondaryUnit": "Hz",
+                "Timestamp": new Date()
             };
         case CommandType.GEN_Cu50_2W:
         case CommandType.GEN_Cu100_2W:
@@ -1595,13 +1602,18 @@ function parseSetpointRead(registers, mode) {
         case CommandType.GEN_THERMO_S:
         case CommandType.GEN_THERMO_T:
             return {
-                "Temperature (°C)": rounded,
-                "Timestamp": new Date(),
+                "Description": "Temperature",
+                "Value": rounded,
                 "Unit": "°C",
-                "Value": rounded
+                "Timestamp": new Date(),
             };
         default:
-            return { "Value": rounded, "Unit": "", "Timestamp": new Date() };
+            return {
+                "Description": "Unknown",
+                "Value": rounded,
+                "Unit": "?",
+                "Timestamp": new Date()
+            };
     }
 
 }
