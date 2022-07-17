@@ -1294,7 +1294,7 @@ function parseMeasure(responseFC3, mode) {
                 "Description": "Current",
                 "Value": Math.round(meas * 100) / 100,
                 "Unit": "mA",
-                "Mininum": Math.round(min * 100) / 100,
+                "Minimum": Math.round(min * 100) / 100,
                 "Maximum": Math.round(max * 100) / 100,
                 "Timestamp": new Date()
             };
@@ -1306,7 +1306,7 @@ function parseMeasure(responseFC3, mode) {
                 "Description": "Voltage",
                 "Value": Math.round(meas * 100) / 100,
                 "Unit": "V",
-                "Mininum": Math.round(min * 100) / 100,
+                "Minimum": Math.round(min * 100) / 100,
                 "Maximum": Math.round(max * 100) / 100,
                 "Timestamp": new Date()
             };
@@ -1318,7 +1318,7 @@ function parseMeasure(responseFC3, mode) {
                 "Description": "Voltage",
                 "Value": Math.round(meas * 100) / 100,
                 "Unit": "mV",
-                "Mininum": Math.round(min * 100) / 100,
+                "Minimum": Math.round(min * 100) / 100,
                 "Maximum": Math.round(max * 100) / 100,
                 "Timestamp": new Date()
             };
@@ -1766,7 +1766,7 @@ async function processCommand() {
             }
         }
 
-        if (!isSetting(command.type))  // IF this is a setting, we're done.
+        if (!isSetting(command.type) && isValid(command.type))  // IF this is a setting, we're done.
         {
             // Now write the mode set 
             log.debug("\t\tSetting new mode :" + command.type);
@@ -1829,7 +1829,7 @@ async function processCommand() {
                     }
                     break;
             } // switch
-        } // if (command.isGeneration())
+        } // if (!isSetting(command.type) && isValid(command.type)))
 
         // Caller expects a valid property in GetState() once command is executed.
         await refresh();
