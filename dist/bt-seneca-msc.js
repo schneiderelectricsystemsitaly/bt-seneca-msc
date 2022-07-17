@@ -872,7 +872,7 @@ function isMeasurement(ctype) {
     return (ctype > CommandType.NONE_UNKNOWN && ctype < CommandType.RESERVED);
 }
 function isSetting(ctype) {
-    return (ctype > CommandType.SETTING_RESERVED);
+    return (ctype == CommandType.OFF || ctype > CommandType.SETTING_RESERVED);
 }
 function isValid(ctype) {
     return (isMeasurement(ctype) || isGeneration(ctype) || isSetting(ctype));
@@ -1776,7 +1776,6 @@ async function processCommand() {
             }
             switch (command.type) {
                 case CommandType.SET_ShutdownDelay:
-                    await sleep(250);
                     startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [RESET_POWER_OFF]);
                     response = await SendAndResponse(startGen);
                     if (!parseFC16checked(response, 1)) {

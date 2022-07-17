@@ -572,7 +572,7 @@ function isMeasurement(ctype) {
     return (ctype > CommandType.NONE_UNKNOWN && ctype < CommandType.RESERVED);
 }
 function isSetting(ctype) {
-    return (ctype > CommandType.SETTING_RESERVED);
+    return (ctype == CommandType.OFF || ctype > CommandType.SETTING_RESERVED);
 }
 function isValid(ctype) {
     return (isMeasurement(ctype) || isGeneration(ctype) || isSetting(ctype));
