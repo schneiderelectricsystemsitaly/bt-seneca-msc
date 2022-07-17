@@ -1289,9 +1289,9 @@ function parseSetpointRead(registers, mode) {
             var fON = 0.0;
             var fOFF = 0.0;
             if (tick1 != 0)
-                fON = Math.round(1 / (tick1 * 2 / 20000.0), 0);
+                fON = Math.round(1 / (tick1 * 2 / 20000.0) * 10.0) / 10; // Need one decimal place for HZ
             if (tick2 != 0)
-                fOFF = Math.round(1 / (tick2 * 2 / 20000.0), 0);
+                fOFF = Math.round(1 / (tick2 * 2 / 20000.0) * 10.0) / 10; // Need one decimal place for HZ
             return {
                 "Description": "Frequency ON",
                 "Value": fON,
