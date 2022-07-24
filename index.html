@@ -156,7 +156,7 @@
         // Event listeners
         $("#startBt").click(async () => {
             $("#resultPair").text("Pending...");
-            var res = await MSC.Pair();
+            var res = await MSC.Pair(false);
             $("#resultPair").text("Result PAIR: " + res);
         });
         $("#stopBt").click(async () => {

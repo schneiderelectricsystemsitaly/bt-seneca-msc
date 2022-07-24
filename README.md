@@ -87,7 +87,7 @@ libman install bt-seneca-msc --provider jsdelivr
 There are 4 operations available:
 
 ```js
-await MSC.Pair(); // bool - Pair to bluetooth
+await MSC.Pair(true/false); // bool - Pair to bluetooth (if True force user pickup)
 await MSC.Stop(); // bool - Disconnect the bluetooth and stops the polling
 await MSC.Execute(MSC.Command); // Execute command. If the device is not paired, an attempt will be made. Command is returned with updated properties.
 await MSC.GetState(); // array - Get the current state
@@ -103,10 +103,10 @@ await MSC.GetStateJSON(); // returns a json string with the same properties as G
 
 ### Connecting to the meter
 
-* Call MSC.Pair() while handling a user gesture in the browser (i.e. button-click)
+* Call MSC.Pair(true) while handling a user gesture in the browser (i.e. button-click)
 
 ```js
- var result = await MSC.Pair(); // true when connection has been established
+ var result = await MSC.Pair(true); // true when connection has been established
 ```
 
 * A dialog will be shown to the user of devices with bluetooth name beginning with MSC

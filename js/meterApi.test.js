@@ -61,7 +61,7 @@ describe('Basic tests', () => {
     })
         
     test('Pair fails (not in browser)', async () => {
-        const result = await MSC.Pair();
+        const result = await MSC.Pair(false);
         // Will fail without navigator object
         expect(result).toBeFalsy();
 
@@ -69,6 +69,15 @@ describe('Basic tests', () => {
         expect(data.status).toBe(MSC.State.STOPPED);
         expect(data.ready).toBeFalsy();
         expect(data.initializing).toBeFalsy();
+
+        const result2 = await MSC.Pair(true);
+        // Will fail without navigator object
+        expect(result2).toBeFalsy();
+
+        const data2 = await MSC.GetState();
+        expect(data2.status).toBe(MSC.State.STOPPED);
+        expect(data2.ready).toBeFalsy();
+        expect(data2.initializing).toBeFalsy();
     })
     
     test('Measurement execution fails', async () => {

@@ -399,7 +399,7 @@ async function Execute(command) {
     // Start the regular state machine
     if (!btState.started) {
         btState.state = State.NOT_CONNECTED;
-        stateMachine();
+        await stateMachine();
     }
 
     // Wait for completion of the command, or halt of the state machine
@@ -414,8 +414,11 @@ async function Execute(command) {
  * MUST BE CALLED FROM A USER GESTURE EVENT HANDLER
   * @returns {boolean} true if meter is ready to execute command
  * */
-async function Pair() {
-    log.info("Pair called...");
+async function Pair(forceSelection=false) {
+    log.info("Pair("+forceSelection+") called...");
+    
+    btState.options["forceDeviceSelection"] = forceSelection;
+
     if (!btState.started) {
         btState.state = State.NOT_CONNECTED;
         stateMachine(); // Start it
@@ -847,6 +850,10 @@ class APIState {
             "lastResponseTime": 0.0,
             "last_connect": new Date(2020, 1, 1).toISOString()
         };
+
+        this.options = {
+            "forceDeviceSelection" : true
+        }
     }
 }
 
@@ -2038,9 +2045,9 @@ function handleNotifications(event) {
  * E.g. button click. This is due to BlueTooth API security model.
  * @param {boolean} forceSelection true to force the bluetooth device selection by user, false to use the one starting with MSC
  * */
-async function btPairDevice(forceSelection = true) {
+async function btPairDevice() {
     btState.state = State.CONNECTING;
-
+    forceSelection = btState.options["forceDeviceSelection"];
     try {
         if (typeof (navigator.bluetooth?.getAvailability) == 'function') {
             const availability = await navigator.bluetooth.getAvailability();
