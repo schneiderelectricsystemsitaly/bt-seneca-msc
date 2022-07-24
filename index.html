@@ -22,7 +22,8 @@
                 <div class="container d-grid gap-3">
                     <div class="row">
                         <div class="col">
-                            <button id="startBt" class="btn btn-primary">Pair()</button>
+                            <button id="startBt" class="btn btn-primary">Pair(true)</button>
+                            <button id="startBt2" class="btn btn-primary">Pair(false)</button>
                         </div>
                         <div class="col">
                             <div id="resultPair"></div>
@@ -157,7 +158,12 @@
         $("#startBt").click(async () => {
             $("#resultPair").text("Pending...");
             var res = await MSC.Pair(false);
-            $("#resultPair").text("Result PAIR: " + res);
+            $("#resultPair").text("Result PAIR(false): " + res);
+        });
+        $("#startBt2").click(async () => {
+            $("#resultPair").text("Pending...");
+            var res = await MSC.Pair(true);
+            $("#resultPair").text("Result PAIR(true): " + res);
         });
         $("#stopBt").click(async () => {
             $("#resultStop").text("Pending...");
