@@ -2047,7 +2047,8 @@ function handleNotifications(event) {
  * */
 async function btPairDevice() {
     btState.state = State.CONNECTING;
-    forceSelection = btState.options["forceDeviceSelection"];
+    var forceSelection = btState.options["forceDeviceSelection"];
+    log.debug("btPairDevice(" + forceSelection + ")");
     try {
         if (typeof (navigator.bluetooth?.getAvailability) == 'function') {
             const availability = await navigator.bluetooth.getAvailability();
@@ -2063,6 +2064,7 @@ async function btPairDevice() {
             && !forceSelection) {
             const availableDevices = await navigator.bluetooth.getDevices();
             availableDevices.forEach(function (dev, index) { if (dev.name.startsWith("MSC")) device = dev; });
+            log.debug("navigator.bluetooth.getDevices()=" + dev);
         }
         // If not, request from user
         if (device == null) {
