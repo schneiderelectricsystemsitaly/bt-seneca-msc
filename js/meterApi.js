@@ -1762,7 +1762,12 @@ async function btPairDevice() {
         if (typeof (navigator.bluetooth?.getDevices) == 'function'
             && !forceSelection) {
             const availableDevices = await navigator.bluetooth.getDevices();
-            availableDevices.forEach(function (dev, index) { if (dev.name.startsWith("MSC")) device = dev; });
+            availableDevices.forEach(function (dev, index) 
+            { 
+                log.debug("Found authorized device :" + dev.name);
+                if (dev.name.startsWith("MSC")) 
+                    device = dev; 
+            });
             log.debug("navigator.bluetooth.getDevices()=" + device);
         }
         // If not, request from user
