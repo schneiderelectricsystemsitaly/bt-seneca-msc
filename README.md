@@ -163,14 +163,15 @@ In all cases, the workflow is the same.
 * Command class
 
 ```js
-// Use the static methods
-var comm_meas = MSC.Command.CreateNoSP(CommandType.<function>)
-var comm_gen = MSC.Command.CreateOneSP(CommandType.<function>, setpoint)
-var comm_cgen = MSC.Command.CreateTwoSP(CommandType.<function>, set1, set2)
-
+// Use the static methods CreateNo/One/TwoSP to initialize a command object
+var comm_meas = MSC.Command.CreateNoSP(<CommandType enum value>)
+var comm_gen = MSC.Command.CreateOneSP(<CommandType enum value>, setpoint)
+var comm_cgen = MSC.Command.CreateTwoSP(<CommandType enum value>, set1, set2)
+// The following properties are available
 comm.error // true if the Execute method has failed 
 comm.type  // type of the command
-comm.setpoint  // copy of setpoints
+comm.setpoint  // copy of setpoint 1 or null
+comm.setpoint2  // copy of setpoint 2 or null
 comm.defaultSetpoint() // see below
 ```
 
