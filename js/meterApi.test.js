@@ -81,15 +81,19 @@ describe('Basic tests', () => {
     })
     
     test('Measurement execution fails', async () => {
-        const command = new MSC.Command(MSC.CommandType.V);
+        const command = MSC.Command.CreateNoSP(MSC.CommandType.V);
         const result = await MSC.Execute(command);
         expect(result).not.toBeNull();
+        expect(result.setpoint).toBe(null);
+        expect(result.setpoint2).toBe(null);
         // Will stay pending since the state machine is not running
         expect(result.pending).toBeTruthy();
     })
     
     test('Generation execution fails', async () => {
-        const command = new MSC.Command(MSC.CommandType.GEN_V, 1.23);
+        const command = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 1.23);
+        expect(command.setpoint).toBe(1.23);
+        expect(command.setpoint2).toBe(null);
         try
         {
             const result = await MSC.Execute(command);
@@ -105,19 +109,23 @@ describe('Basic tests', () => {
 
     test('Command.getDefaultSetpoint and Command properties', async () => {
         for(var ctype in CommandType) {
-            const command = new MSC.Command(CommandType[ctype]);
+            const command = MSC.Command.CreateNoSP(CommandType[ctype]);
             const info = command.defaultSetpoint();
             expect(info).not.toBeNull();
             const test = command.isGeneration() || command.isMeasurement() || command.isSetting() || !command.isValid();
             expect(test).toBeTruthy();
         }
-        var comm = new MSC.Command(MSC.CommandType.GEN_V);
+        var comm = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 1);
         expect(comm.isGeneration()).toBeTruthy();
-        comm = new MSC.Command(MSC.CommandType.mA_passive);
+        expect(comm.setpoint).toBe(1.0);
+        comm = MSC.Command.CreateNoSP(MSC.CommandType.mA_passive);
         expect(comm.isMeasurement()).toBeTruthy();
-        comm = new MSC.Command(MSC.CommandType.SET_Ulow);
+        expect(comm.setpoint).toBe(null);
+        expect(comm.setpoint2).toBe(null);
+        comm = MSC.Command.CreateOneSP(MSC.CommandType.SET_Ulow, 0);
         expect(comm.isSetting()).toBeTruthy();
-
+        expect(comm.setpoint).toBe(0);
+        expect(comm.setpoint2).toBe(null);
     })
 
     test('Non-null refreshed properties of GetState', async () => {
@@ -129,23 +137,24 @@ describe('Basic tests', () => {
     })
 
     test('JSON Execute works', async () => {
-        var comm = new MSC.Command(MSC.CommandType.GEN_V, 5.0);
+        var comm = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 5.0);
         var result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm)));
         expect(result).toHaveProperty('error');
         expect(result).toHaveProperty('pending');
         expect(result).toHaveProperty('setpoint');
         expect(result.pending).toBeTruthy();
         expect(result.setpoint).toBe(5.0);
+        expect(result.setpoint2).toBe(null);
 
-        comm = new MSC.Command(MSC.CommandType.GEN_PulseTrain, [5, 10]);
+        comm = MSC.Command.CreateTwoSP(MSC.CommandType.GEN_PulseTrain, 5, 10);
         result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm)));
 
         expect(result).toHaveProperty('error');
         expect(result).toHaveProperty('pending');
         expect(result).toHaveProperty('setpoint');
         expect(result.pending).toBeTruthy();
-        expect(result.setpoint[0]).toBe(5);
-        expect(result.setpoint[1]).toBe(10);
+        expect(result.setpoint).toBe(5);
+        expect(result.setpoint2).toBe(10);
         
     });
 })

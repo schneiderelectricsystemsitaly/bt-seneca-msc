@@ -163,7 +163,11 @@ In all cases, the workflow is the same.
 * Command class
 
 ```js
-var comm = new MSC.Command(CommandType.<function>, null|setpoint|[setpoint1, setpoint2])
+// Use the static methods
+var comm_meas = MSC.Command.CreateNoSP(CommandType.<function>)
+var comm_gen = MSC.Command.CreateOneSP(CommandType.<function>, setpoint)
+var comm_cgen = MSC.Command.CreateTwoSP(CommandType.<function>, set1, set2)
+
 comm.error // true if the Execute method has failed 
 comm.type  // type of the command
 comm.setpoint  // copy of setpoints
@@ -175,7 +179,7 @@ comm.defaultSetpoint() // see below
 ```js
 var state = await MSC.GetState();
 if (state.ready) { // Check that the meter is ready
-    var command = new MSC.Command(MSC.CommandType.mV); // Read mV function
+    var command = MSC.Command.CreateNoSP(MSC.CommandType.mV); // Read mV function
     var result = await MSC.Execute(command);
     if (result.error) { // Check the error property of returned Command
         // Something happened with command execution (device off, comm error...)
@@ -203,7 +207,7 @@ else {
 ```js
 var state = await MSC.GetState();
 if (state.ready) {
-    var command = new MSC.Command(MSC.CommandType.GEN_V, 5.2); // Generate 5.2 V
+    var command = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 5.2); // Generate 5.2 V
     var result = await MSC.Execute(command);
     if (result.error) { // Check the error property of returned Command
         // Something happened with command execution (device off, comm error...)
@@ -230,17 +234,17 @@ else {
 ```js
 // Assuming meter.ready
 
-var command1 = new MSC.Command(MSC.CommandType.SET_Ulow, 0.0); 
+var command1 = MSC.Command.CreateOneSP(MSC.CommandType.SET_Ulow, 0.0); 
 var result1 = await MSC.Execute(command1);
 if (result1.error) { // Check the error property of returned Command
     // Something happened with command execution (device off, comm error...)
 }
-var command2 = new MSC.Command(MSC.CommandType.SET_Uhigh, 5.0); 
+var command2 = MSC.Command.CreateOneSP(MSC.CommandType.SET_Uhigh, 5.0); 
 var result2 = await MSC.Execute(command2);
 if (result2.error) { // Check the error property of returned Command
     // Something happened with command execution (device off, comm error...)
 }
-var command3 = new MSC.Command(MSC.CommandType.GEN_PulseTrain, [100, 1000/50]]); 
+var command3 = MSC.Command.CreateTwoSP(MSC.CommandType.GEN_PulseTrain, 100, 1000/50); 
 var result3 = await MSC.Execute(command3);
 if (result3.error) { // Check the error property of returned Command
     // Something happened with command execution (device off, comm error...)
@@ -418,7 +422,8 @@ public class MSCState
 public class MSCCommand
 {
     public int type;
-    public dynamic setpoint;
+    public float setpoint;
+    public float setpoint2;
     public bool error = false;
     public bool pending = true;
     public MSCCommand() { this.type = (int)CommandType.NONE_UNKNOWN; }
@@ -431,14 +436,15 @@ public class MSCCommand
         this.type = (int)type;
         this.setpoint = setpoint;
     }
-    public MSCCommand(CommandType type, float[] setpoints)
+    public MSCCommand(CommandType type, float setpoint, float setpoint2)
     {
         this.type = (int)type;
-        this.setpoint = setpoints;
+        this.setpoint = setpoint;
+        this.setpoint2 = setpoint2;
     }
     public override string ToString()
     {
-        return $"Type:{(CommandType)type}, Setpoint:{setpoint}, pending:{pending}, error:{error}";
+        return $"Type:{(CommandType)type}, Setpoints:{setpoint}/{setpoint2}, pending:{pending}, error:{error}";
     }
 }
 

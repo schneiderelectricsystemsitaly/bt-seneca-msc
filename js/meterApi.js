@@ -599,17 +599,37 @@ class Command {
      * Creates a new command
      * @param {CommandType} ctype
      */
-    constructor(ctype = CommandType.NONE_UNKNOWN, setpoint = null) {
+    constructor(ctype = CommandType.NONE_UNKNOWN) {
         this.type = parseInt(ctype);
-        this.setpoint = setpoint;
+        this.setpoint = null;
+        this.setpoint2 = null;
         this.error = false;
         this.pending = true;
         this.request = null;
         this.response = null;
     }
 
+    static CreateNoSP(ctype)
+    {
+        var cmd = new Command(ctype);
+        return cmd;
+    }
+    static CreateOneSP(ctype, setpoint)
+    {
+        var cmd = new Command(ctype);
+        cmd.setpoint = parseFloat(setpoint);
+        return cmd;
+    }
+    static CreateTwoSP(ctype, set1, set2)
+    {
+        var cmd = new Command(ctype);
+        cmd.setpoint = parseFloat(set1);
+        cmd.setpoint2 = parseFloat(set2);;
+        return cmd;
+    }
+
     toString() {
-        return "Type: " + Parse(CommandType, this.type) + ", setpoint:" + this.setpoint + ", pending:" + this.pending + ", error:" + this.error;
+        return "Type: " + Parse(CommandType, this.type) + ", setpoint:" + this.setpoint + ", setpoint2: " + this.setpoint2 + ", pending:" + this.pending + ", error:" + this.error;
     }
 
     /**
@@ -1119,9 +1139,10 @@ function parseGenStatus(responseFC3, mode) {
 /**
  * Returns a buffer with the modbus-rtu request to be sent to Seneca
  * @param {CommandType} mode generation mode
- * @param {number|Array} setpoint the value to set (mV/V/A/Hz/°C) except for pulses [num_pulses, frequency in Hz]
+ * @param {number} setpoint the value to set (mV/V/A/Hz/°C) except for pulses num_pulses
+ * @param {number} setpoint2 frequency in Hz
  */
-function makeSetpointRequest(mode, setpoint) {
+function makeSetpointRequest(mode, setpoint, setpoint2) {
     var TEMP, registers;
     var dt = new ArrayBuffer(4);
     var dv = new DataView(dt);
@@ -1184,9 +1205,9 @@ function makeSetpointRequest(mode, setpoint) {
 
             // See Senecal manual manual
             // Max 20kHZ gen
-            TEMP = Math.round(20000 / setpoint[1], 0);
+            TEMP = Math.round(20000 / setpoint2, 0);
 
-            dv.setUint32(0, setpoint[0], false); // NUM_PULSES
+            dv.setUint32(0, setpoint, false); // NUM_PULSES
             dv.setUint32(4, Math.floor(TEMP / 2), false); // TICK1
             dv.setUint32(8, TEMP - Math.floor(TEMP / 2), false); // TICK2
 
@@ -1493,7 +1514,7 @@ async function processCommand() {
         // Now write the setpoint or setting
         if (isGeneration(command.type) || isSetting(command.type) && command.type != CommandType.OFF) {
             log.debug("\t\tWriting setpoint :" + command.setpoint);
-            response = await SendAndResponse(makeSetpointRequest(command.type, command.setpoint));
+            response = await SendAndResponse(makeSetpointRequest(command.type, command.setpoint, command.setpoint2));
             if (response !=null && !parseFC16checked(response, 0)) {
                 throw new Error("Setpoint not correctly written");
             }
