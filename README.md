@@ -126,8 +126,10 @@ var mstate = await MSC.GetState();
 mstate.ready          // The meter is ready to execute commands
 mstate.initializing   // The meter is initializing bluetooth
 mstate.status         // State machine internal status (Ready,Busy,Pairing,...)
-mstate.lastSetpoint   // Last executed generation function. Element at position 0 is the setpoint.
-mstate.lastMeasure    // Last measurement. Element at position 0 is the main measurement.
+
+mstate.lastSetpoint   // Last executed generation data. An array.
+mstate.lastMeasure    // Last measurement. An array.
+
 mstate.deviceName     // Name of the bluetooth device paired
 mstate.deviceSerial   // Serial number of the MSC device
 mstate.deviceMode     // Current mode of the MSC device (see CommandType values)
