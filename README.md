@@ -84,18 +84,20 @@ libman install bt-seneca-msc --provider jsdelivr
 
 ## External API
 
-There are 4 operations available:
+There are 5 operations available:
 
 ```js
 await MSC.Pair(true/false); // bool - Pair to bluetooth (if True force user pickup)
 await MSC.Stop(); // bool - Disconnect the bluetooth and stops the polling
-await MSC.Execute(MSC.Command); // Execute command. If the device is not paired, an attempt will be made. Command is returned with updated properties.
-await MSC.GetState(); // array - Get the current state
+await MSC.Execute(MSC.Command object); // Execute command. If the device is not paired, an attempt will be made. Command is returned with updated properties.
+await MSC.GetState(); // Returns an array with the current state
+await MSC.SimpleExecute(MSC.Command object); // Execute the command and results the value
 ```
 
 * JSON versions are available for ASPNET.core interop
 
 ```js
+await MSC.SimpleExecuteJSON(jsonCommand); // Expects a json string (Command) and returns a json string (simple result)
 await MSC.ExecuteJSON(jsonCommand); // Expects a json string (Command) and returns a json string (update Command object)
 await MSC.GetStateJSON(); // returns a json string with the same properties as GetState()
 ```
@@ -160,9 +162,7 @@ The state property returned by GetState() can have the following values (see MSC
 The MSC device supports readings and generations. Each function corresponds to a CommandType enum value.
 Generations require one or more setpoint, depending on the specific function.
 
-In all cases, the workflow is the same.
-
-* Command class
+* Command class is a required parameter to send a command to the meter
 
 ```js
 // Use the static methods CreateNo/One/TwoSP to initialize a command object
@@ -176,6 +176,32 @@ comm.setpoint  // copy of setpoint 1 or null
 comm.setpoint2  // copy of setpoint 2 or null
 comm.defaultSetpoint() // see below
 ```
+
+* In all cases, will try to re-execute the command if communication breaks during execution.
+* The API will put the device in OFF state before writing setpoints (for safety), then apply the new mode settings after a slight delay.
+* For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter 1s after mode change.
+
+
+#### Sending commands to the meter (simple version)
+
+SimpleExecute will send the command and update the state. 
+* It will fail if a command is already pending, the meter is not paired, or the command execution fails for whatever reason. 
+* A message property is available for diagnostics.
+* It will not attempt to pair the device if not already paired and fail fast.
+
+```js
+// Use the static methods CreateNo/One/TwoSP to initialize a command object
+var comm_meas = MSC.Command.CreateNoSP(CommandType.V);
+var result = await MSC.SimpleExecute(command);
+if (!result.error)
+{
+    console.log("The command was executed and the returned value is " + result.value);
+}
+```
+
+#### Sending commands to the meter (complex version)
+
+Execute method will wait for the previous comand to complete, queue the new command, and return an updated Command object. You will need to call GetState to have the results of the command.
 
 * Read example
 
@@ -255,12 +281,8 @@ if (result3.error) { // Check the error property of returned Command
     // MSC is now generating the pulses
 }
 ```
-* After a command execution the state is up-to-date
-* If another command is pending execution, Execute() will wait until completion of the previous command.
+* After a command execution the state is up-to-date (garantee)
 * If the state machine is stopped, an attempt will be made to start the machine. This may require to Pair the device and it will fail if Execute is not called from a user-gesture handling function in the browser.
-* API will try to re-execute the command if communication breaks during execution (see internal states above). 
-* The API will put the device in OFF state before writing setpoints (for safety), then apply the new mode settings after a slight delay.
-* For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter 1s after mode change.
 * To get the expected setpoints for a specific command type, use Command.defaultSetpoint(). This is used in the demo page in order to present to the user the right input boxes with meaningful descriptions.
 
 ```js
