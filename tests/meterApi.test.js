@@ -1,3 +1,4 @@
+const MeterState = require('../classes/MeterState');
 const MSC = require('../meterApi');
 var CommandType = MSC.CommandType;
 
@@ -175,7 +176,7 @@ describe('Basic tests', () => {
         
         expect(result.error).toBeTruthy();
         expect(result.message).not.toBeNull();
-    });
+    })
 
     test('SimpleExecuteJSON returns the right properties', async () => {
         var comm = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 5.0);
@@ -187,6 +188,16 @@ describe('Basic tests', () => {
         
         expect(result.error).toBeTruthy();
         expect(result.message).not.toBeNull();
-    });
+    })
+    
+    test('MeterState tests', async () => {
+        var state = new MeterState();
+        state.mode = MSC.CommandType.Cu50_2W;
+        expect(state.isMeasurement()).toBeTruthy();
+        expect(state.isGeneration()).toBeFalsy();
+        state.mode = MSC.CommandType.GEN_Cu100_2W
+        expect(state.isMeasurement()).toBeFalsy();
+        expect(state.isGeneration()).toBeTruthy();
+    })
 })
 

@@ -47,4 +47,14 @@ function isValid(ctype) {
     return null;
 }
 
-module.exports = { sleep, waitFor, waitForTimeout, isGeneration, isMeasurement, isSetting, isValid, Parse };
+/**
+ * Helper function to dump arraybuffer as hex string
+ * @param {ArrayBuffer} buffer
+ */
+ function buf2hex(buffer) { // buffer is an ArrayBuffer
+    return [...new Uint8Array(buffer)]
+        .map(x => x.toString(16).padStart(2, '0'))
+        .join(' ');
+}
+
+module.exports = { sleep, waitFor, waitForTimeout, isGeneration, isMeasurement, isSetting, isValid, Parse, buf2hex };

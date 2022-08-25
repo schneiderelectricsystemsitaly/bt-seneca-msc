@@ -4,9 +4,13 @@ var APIState = require('./classes/APIState');
 var log = require('loglevel');
 var constants = require('./constants');
 var utils = require('./utils');
+var seneca = require('./senecaModbus');
+var modbus = require('./modbusRtu');
 
 var btState = APIState.btState;
 var State = constants.State;
+var CommandType = constants.CommandType;
+var buf2hex = utils.buf2hex;
 
 /*
  * Bluetooth constants
@@ -143,22 +147,22 @@ async function processCommand() {
 
         // First set NONE because we don't want to write new setpoints with active generation
         log.debug("\t\tSetting meter to OFF");
-        packet = makeModeRequest(CommandType.OFF);
+        packet = seneca.makeModeRequest(CommandType.OFF);
         await SendAndResponse(packet);
         await utils.sleep(100);
 
         // Now write the setpoint or setting
-        if (isGeneration(command.type) || isSetting(command.type) && command.type != CommandType.OFF) {
+        if (utils.isGeneration(command.type) || utils.isSetting(command.type) && command.type != CommandType.OFF) {
             log.debug("\t\tWriting setpoint :" + command.setpoint);
-            response = await SendAndResponse(makeSetpointRequest(command.type, command.setpoint, command.setpoint2));
-            if (response != null && !parseFC16checked(response, 0)) {
+            response = await SendAndResponse(seneca.makeSetpointRequest(command.type, command.setpoint, command.setpoint2));
+            if (response != null && !modbus.parseFC16checked(response, 0)) {
                 throw new Error("Setpoint not correctly written");
             }
             switch (command.type) {
                 case CommandType.SET_ShutdownDelay:
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [RESET_POWER_OFF]);
+                    startGen = modbus.makeFC16(modbus.SENECA_MB_SLAVE_ID, seneca.MSCRegisters.CMD, [RESET_POWER_OFF]);
                     response = await SendAndResponse(startGen);
-                    if (!parseFC16checked(response, 1)) {
+                    if (!modbus.parseFC16checked(response, 1)) {
                         command.error = true;
                         command.pending = false;
                         throw new Error("Failure to set poweroff timer.");
@@ -169,11 +173,11 @@ async function processCommand() {
             }
         }
 
-        if (!isSetting(command.type) && isValid(command.type) && command.type != CommandType.OFF)  // IF this is a setting, we're done.
+        if (!utils.isSetting(command.type) && utils.isValid(command.type) && command.type != CommandType.OFF)  // IF this is a setting, we're done.
         {
             // Now write the mode set 
             log.debug("\t\tSetting new mode :" + command.type);
-            packet = makeModeRequest(command.type);
+            packet = seneca.makeModeRequest(command.type);
             if (packet == null) {
                 command.error = true;
                 command.pending = false;
@@ -185,7 +189,7 @@ async function processCommand() {
             command.request = packet;
             command.answer = response;
 
-            if (!parseFC16checked(response, 0)) {
+            if (!modbus.parseFC16checked(response, 0)) {
                 command.error = true;
                 command.pending = false;
                 throw new Error("Not all registers were written");
@@ -201,9 +205,9 @@ async function processCommand() {
                     await utils.sleep(1000);
                     // Reset the min/max/avg value
                     log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [CLEAR_AVG_MIN_MAX]);
+                    startGen = modbus.makeFC16(modbus.SENECA_MB_SLAVE_ID, seneca.MSCRegisters.CMD, [CLEAR_AVG_MIN_MAX]);
                     response = await SendAndResponse(startGen);
-                    if (!parseFC16checked(response, 1)) {
+                    if (!modbus.parseFC16checked(response, 1)) {
                         command.error = true;
                         command.pending = false;
                         throw new Error("Failure to reset stats.");
@@ -212,9 +216,9 @@ async function processCommand() {
                 case CommandType.GEN_PulseTrain:
                     await utils.sleep(1000);
                     log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [PULSE_CMD, 2]); // Start with low
+                    startGen = modbus.makeFC16(modbus.SENECA_MB_SLAVE_ID, seneca.MSCRegisters.GEN_CMD, [PULSE_CMD, 2]); // Start with low
                     response = await SendAndResponse(startGen);
-                    if (!parseFC16checked(response, 2)) {
+                    if (!modbus.parseFC16checked(response, 2)) {
                         command.error = true;
                         command.pending = false;
                         throw new Error("Not all registers were written");
@@ -223,9 +227,9 @@ async function processCommand() {
                 case CommandType.GEN_Frequency:
                     await utils.sleep(1000);
                     log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [PULSE_CMD, 1]); // start gen
+                    startGen = modbus.makeFC16(modbus.SENECA_MB_SLAVE_ID, seneca.MSCRegisters.GEN_CMD, [PULSE_CMD, 1]); // start gen
                     response = await SendAndResponse(startGen);
-                    if (!parseFC16checked(response, 2)) {
+                    if (!modbus.parseFC16checked(response, 2)) {
                         command.error = true;
                         command.pending = false;
                         throw new Error("Not all registers were written");
@@ -235,7 +239,7 @@ async function processCommand() {
 
             // Disable auto power off
             log.debug("\t\tDisabling power off");
-            startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [RESET_POWER_OFF]);
+            startGen = modbus.makeFC16(seneca.SENECA_MB_SLAVE_ID, seneca.MSCRegisters.CMD, [RESET_POWER_OFF]);
             response = await SendAndResponse(startGen);
 
         } // if (!isSetting(command.type) && isValid(command.type)))
@@ -255,7 +259,7 @@ async function processCommand() {
         log.error("** error while executing command: " + err);
         btState.state = State.METER_INIT;
         btState.stats["exceptions"]++;
-        if (err instanceof ModbusError)
+        if (err instanceof modbus.ModbusError)
             btState.stats["modbus_errors"]++;
         return;
     }
@@ -304,16 +308,16 @@ async function meterInit() {
 
     try {
         btState.state = State.METER_INITIALIZING;
-        response = await SendAndResponse(makeSerialNumber());
-        btState.meter.serial = parseSerialNumber(parseFC3(response));
+        response = await SendAndResponse(seneca.makeSerialNumber());
+        btState.meter.serial = seneca.parseSerialNumber(modbus.parseFC3(response));
         log.info('\t\tSerial number:' + btState.meter.serial);
 
-        response = await SendAndResponse(makeCurrentMode());
-        btState.meter.mode = parseCurrentMode(parseFC3(response), CommandType.NONE_UNKNOWN);
+        response = await SendAndResponse(seneca.makeCurrentMode());
+        btState.meter.mode = seneca.parseCurrentMode(modbus.parseFC3(response), CommandType.NONE_UNKNOWN);
         log.debug('\t\tCurrent mode:' + btState.meter.mode);
 
-        response = await SendAndResponse(makeBatteryLevel());
-        btState.meter.battery = Math.round(parseBattery(parseFC3(response)) * 100) / 100;
+        response = await SendAndResponse(seneca.makeBatteryLevel());
+        btState.meter.battery = Math.round(seneca.parseBattery(modbus.parseFC3(response)) * 100) / 100;
 
         btState.state = State.IDLE;
     }
@@ -321,7 +325,7 @@ async function meterInit() {
         log.warn("Error while initializing meter :" + err);
         btState.stats["exceptions"]++;
         btState.state = State.DEVICE_PAIRED;
-        if (err instanceof ModbusError)
+        if (err instanceof modbus.ModbusError)
             btState.stats["modbus_errors"]++;
     }
 }
@@ -524,8 +528,8 @@ async function refresh() {
     btState.state = State.BUSY;
     try {
         // Check the mode first
-        var response = await SendAndResponse(makeCurrentMode());
-        var mode = parseCurrentMode(parseFC3(response), btState.meter.mode);
+        var response = await SendAndResponse(seneca.makeCurrentMode());
+        var mode = seneca.parseCurrentMode(modbus.parseFC3(response), btState.meter.mode);
 
         if (mode != CommandType.NONE_UNKNOWN) {
             btState.meter.mode = mode;
@@ -543,7 +547,7 @@ async function refresh() {
         log.warn("Error while refreshing measure" + err);
         btState.state = State.DEVICE_PAIRED;
         btState.stats["exceptions"]++;
-        if (err instanceof ModbusError)
+        if (err instanceof modbus.ModbusError)
             btState.stats["modbus_errors"]++;
     }
 }
@@ -553,12 +557,12 @@ async function refresh() {
  * */
 async function refreshMeasure() {
     // Read quality
-    var response = await SendAndResponse(makeQualityBitRequest());
-    var valid = isQualityValid(parseFC3(response));
+    var response = await SendAndResponse(seneca.makeQualityBitRequest());
+    var valid = seneca.isQualityValid(modbus.parseFC3(response));
 
     // Read measure
-    response = await SendAndResponse(makeMeasureRequest(btState.meter.mode));
-    var meas = parseMeasure(parseFC3(response), btState.meter.mode);
+    response = await SendAndResponse(seneca.makeMeasureRequest(btState.meter.mode));
+    var meas = seneca.parseMeasure(modbus.parseFC3(response), btState.meter.mode);
     meas["error"] = !valid;
 
     btState.lastMeasure = meas;
@@ -568,12 +572,12 @@ async function refreshMeasure() {
  * Gets the current values for the generated U,I from the device
  * */
 async function refreshGeneration() {
-    var response = await SendAndResponse(makeSetpointRead(btState.meter.mode));
+    var response = await SendAndResponse(seneca.makeSetpointRead(btState.meter.mode));
     if (response != null) {
-        var results = parseSetpointRead(parseFC3(response), btState.meter.mode);
+        var results = seneca.parseSetpointRead(modbus.parseFC3(response), btState.meter.mode);
 
-        response = await SendAndResponse(makeGenStatusRead());
-        results["error"] = !parseGenStatus(parseFC3(response), btState.meter.mode);
+        response = await SendAndResponse(seneca.makeGenStatusRead());
+        results["error"] = !seneca.parseGenStatus(modbus.parseFC3(response), btState.meter.mode);
 
         btState.lastSetpoint = results;
     }

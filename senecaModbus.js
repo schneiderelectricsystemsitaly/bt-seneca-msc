@@ -1,4 +1,14 @@
+'use strict';
+
 /******************************* MODBUS RTU FUNCTIONS FOR SENECA **********************/
+
+var modbus = require('./modbusRtu');
+var constants = require('./constants');
+var utils = require('./utils');
+
+var CommandType = constants.CommandType;
+const SENECA_MB_SLAVE_ID = modbus.SENECA_MB_SLAVE_ID; // Modbus RTU slave ID
+
 /*
  * Modbus registers map. Each register is 2 bytes wide.
  */
@@ -43,22 +53,22 @@ const MSCRegisters = {
 /**
  * Generate the modbus RTU packet to read the serial number
  * */
- function makeSerialNumber() {
-    return makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.SerialNumber);
+function makeSerialNumber() {
+    return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.SerialNumber);
 }
 
 /**
  * Generate the modbus RTU packet to read the current mode
  * */
 function makeCurrentMode() {
-    return makeFC3(SENECA_MB_SLAVE_ID, 1, MSCRegisters.CurrentMode);
+    return modbus.makeFC3(SENECA_MB_SLAVE_ID, 1, MSCRegisters.CurrentMode);
 }
 
 /**
  * Generate the modbus RTU packet to read the current battery level
  * */
 function makeBatteryLevel() {
-    return makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.BatteryMeasure);
+    return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.BatteryMeasure);
 }
 
 /**
@@ -67,7 +77,7 @@ function makeBatteryLevel() {
  * @returns {number} battery level in V
  */
 function parseBattery(responseFC3) {
-    return getFloat32LEBS(responseFC3, 0);
+    return modbus.getFloat32LEBS(responseFC3, 0);
 }
 
 /**
@@ -88,22 +98,6 @@ function parseSerialNumber(registers) {
 }
 
 /**
- * Helper function to convert a value into an enum value
- * 
- * @param {type} enumtype
- * @param {number} enumvalue
- */
-function Parse(enumtype, enumvalue) {
-    for (var enumName in enumtype) {
-        if (enumtype[enumName] == enumvalue) {
-            /*jshint -W061 */
-            return eval([enumtype + "." + enumName]);
-        }
-    }
-    return null;
-}
-
-/**
  * Parses the state of the meter. May throw.
  * @param {ArrayBuffer} registers register value
  * @param {CommandType} currentMode if the registers contains an IGNORE value, returns the current mode
@@ -118,7 +112,7 @@ function parseCurrentMode(registers, currentMode) {
     if (val1 == CommandType.RESERVED || val1 == CommandType.GEN_RESERVED || val1 == CommandType.RESERVED_2) { // Must be ignored
         return currentMode;
     }
-    const value = Parse(CommandType, val1);
+    const value = utils.Parse(CommandType, val1);
     if (value == null)
         throw new Error("Unknown meter mode : " + value);
 
@@ -130,7 +124,7 @@ function parseCurrentMode(registers, currentMode) {
  * @returns {ArrayBuffer|null}
  */
 function makeModeRequest(mode) {
-    const value = Parse(CommandType, mode);
+    const value = utils.Parse(CommandType, mode);
     const CHANGE_STATUS = 1;
 
     // Filter invalid commands
@@ -139,7 +133,7 @@ function makeModeRequest(mode) {
     }
 
     if (mode > CommandType.NONE_UNKNOWN && mode <= CommandType.OFF) { // Measurements
-        return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [CHANGE_STATUS, mode]);
+        return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [CHANGE_STATUS, mode]);
     }
     else if (mode > CommandType.OFF && mode < CommandType.GEN_RESERVED) { // Generations
         switch (mode) {
@@ -153,7 +147,7 @@ function makeModeRequest(mode) {
             case CommandType.GEN_THERMO_S:
             case CommandType.GEN_THERMO_T:
                 // Cold junction not configured
-                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [CHANGE_STATUS, mode]);
+                return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [CHANGE_STATUS, mode]);
             case CommandType.GEN_Cu50_3W:
             case CommandType.GEN_Cu50_2W:
             case CommandType.GEN_Cu100_2W:
@@ -164,7 +158,7 @@ function makeModeRequest(mode) {
             case CommandType.GEN_PT1000_2W:
             default:
                 // All the simple cases 
-                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [CHANGE_STATUS, mode]);
+                return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [CHANGE_STATUS, mode]);
         }
 
     }
@@ -189,7 +183,7 @@ function makeMeasureRequest(mode) {
         case CommandType.THERMO_R:
         case CommandType.THERMO_S:
         case CommandType.THERMO_T:
-            return makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.TempMeasure);
+            return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.TempMeasure);
         case CommandType.Cu50_2W:
         case CommandType.Cu50_3W:
         case CommandType.Cu50_4W:
@@ -211,18 +205,18 @@ function makeMeasureRequest(mode) {
         case CommandType.PT1000_2W:
         case CommandType.PT1000_3W:
         case CommandType.PT1000_4W:
-            return makeFC3(SENECA_MB_SLAVE_ID, 4, MSCRegisters.RtdTemperatureMeasure); // Temp-Ohm
+            return modbus.makeFC3(SENECA_MB_SLAVE_ID, 4, MSCRegisters.RtdTemperatureMeasure); // Temp-Ohm
         case CommandType.Frequency:
-            return makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.FrequencyMeasure);
+            return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.FrequencyMeasure);
         case CommandType.PulseTrain:
-            return makeFC3(SENECA_MB_SLAVE_ID, 4, MSCRegisters.PulseOFFMeasure); // ON-OFF
+            return modbus.makeFC3(SENECA_MB_SLAVE_ID, 4, MSCRegisters.PulseOFFMeasure); // ON-OFF
         case CommandType.LoadCell:
-            return makeFC3(SENECA_MB_SLAVE_ID, 4, MSCRegisters.LoadCell);
+            return modbus.makeFC3(SENECA_MB_SLAVE_ID, 4, MSCRegisters.LoadCell);
         case CommandType.mA_passive:
         case CommandType.mA_active:
         case CommandType.V:
         case CommandType.mV:
-            return makeFC3(SENECA_MB_SLAVE_ID, 6, MSCRegisters.MinMeasure); // Min-Max-Meas
+            return modbus.makeFC3(SENECA_MB_SLAVE_ID, 6, MSCRegisters.MinMeasure); // Min-Max-Meas
         default:
             throw new Error("Mode not managed :" + btState.meter.mode);
     }
@@ -250,7 +244,7 @@ function parseMeasure(responseFC3, mode) {
         case CommandType.THERMO_N:
         case CommandType.THERMO_R:
         case CommandType.THERMO_S:
-            meas = getFloat32LEBS(responseFC3, 0);
+            meas = modbus.getFloat32LEBS(responseFC3, 0);
             var value = Math.round(meas * 100) / 100
             return {
                 "Description": "Temperature",
@@ -279,8 +273,8 @@ function parseMeasure(responseFC3, mode) {
         case CommandType.PT1000_2W:
         case CommandType.PT1000_3W:
         case CommandType.PT1000_4W:
-            meas = getFloat32LEBS(responseFC3, 0);
-            meas2 = getFloat32LEBS(responseFC3, 4);
+            meas = modbus.getFloat32LEBS(responseFC3, 0);
+            meas2 = modbus.getFloat32LEBS(responseFC3, 4);
             return {
                 "Description": "Temperature",
                 "Value": Math.round(meas * 10) / 10,
@@ -291,7 +285,7 @@ function parseMeasure(responseFC3, mode) {
                 "Timestamp": new Date().toISOString()
             };
         case CommandType.Frequency:
-            meas = getFloat32LEBS(responseFC3, 0);
+            meas = modbus.getFloat32LEBS(responseFC3, 0);
             // Sensibilità mancanti
             return {
                 "Description": "Frequency",
@@ -301,9 +295,9 @@ function parseMeasure(responseFC3, mode) {
             };
         case CommandType.mA_active:
         case CommandType.mA_passive:
-            min = getFloat32LEBS(responseFC3, 0);
-            max = getFloat32LEBS(responseFC3, 4);
-            meas = getFloat32LEBS(responseFC3, 8);
+            min = modbus.getFloat32LEBS(responseFC3, 0);
+            max = modbus.getFloat32LEBS(responseFC3, 4);
+            meas = modbus.getFloat32LEBS(responseFC3, 8);
             return {
                 "Description": "Current",
                 "Value": Math.round(meas * 100) / 100,
@@ -313,9 +307,9 @@ function parseMeasure(responseFC3, mode) {
                 "Timestamp": new Date().toISOString()
             };
         case CommandType.V:
-            min = getFloat32LEBS(responseFC3, 0);
-            max = getFloat32LEBS(responseFC3, 4);
-            meas = getFloat32LEBS(responseFC3, 8);
+            min = modbus.getFloat32LEBS(responseFC3, 0);
+            max = modbus.getFloat32LEBS(responseFC3, 4);
+            meas = modbus.getFloat32LEBS(responseFC3, 8);
             return {
                 "Description": "Voltage",
                 "Value": Math.round(meas * 100) / 100,
@@ -325,9 +319,9 @@ function parseMeasure(responseFC3, mode) {
                 "Timestamp": new Date().toISOString()
             };
         case CommandType.mV:
-            min = getFloat32LEBS(responseFC3, 0);
-            max = getFloat32LEBS(responseFC3, 4);
-            meas = getFloat32LEBS(responseFC3, 8);
+            min = modbus.getFloat32LEBS(responseFC3, 0);
+            max = modbus.getFloat32LEBS(responseFC3, 4);
+            meas = modbus.getFloat32LEBS(responseFC3, 8);
             return {
                 "Description": "Voltage",
                 "Value": Math.round(meas * 100) / 100,
@@ -337,8 +331,8 @@ function parseMeasure(responseFC3, mode) {
                 "Timestamp": new Date().toISOString()
             };
         case CommandType.PulseTrain:
-            meas = getUint32LEBS(responseFC3, 0);
-            meas2 = getUint32LEBS(responseFC3, 4);
+            meas = modbus.getUint32LEBS(responseFC3, 0);
+            meas2 = modbus.getUint32LEBS(responseFC3, 4);
             // Soglia e sensibilità mancanti
             return {
                 "Description": "Pulse ON",
@@ -350,7 +344,7 @@ function parseMeasure(responseFC3, mode) {
                 "Timestamp": new Date().toISOString()
             };
         case CommandType.LoadCell:
-            meas = Math.round(getFloat32LEBS(responseFC3, 0) * 1000) / 1000;
+            meas = Math.round(modbus.getFloat32LEBS(responseFC3, 0) * 1000) / 1000;
             // Kg mancanti
             // Sensibilità, tara, portata mancanti
             return {
@@ -375,7 +369,7 @@ function parseMeasure(responseFC3, mode) {
  * @returns {ArrayBuffer} modbus RTU request to send
  */
 function makeQualityBitRequest(mode) {
-    return makeFC3(SENECA_MB_SLAVE_ID, 1, MSCRegisters.MeasureFlags);
+    return modbus.makeFC3(SENECA_MB_SLAVE_ID, 1, MSCRegisters.MeasureFlags);
 }
 
 /**
@@ -393,7 +387,7 @@ function isQualityValid(responseFC3) {
  * @returns {ArrayBuffer} modbus RTU request to send
  */
 function makeGenStatusRead(mode) {
-    return makeFC3(SENECA_MB_SLAVE_ID, 1, MSCRegisters.GenerationFlags);
+    return modbus.makeFC3(SENECA_MB_SLAVE_ID, 1, MSCRegisters.GenerationFlags);
 }
 
 /**
@@ -424,21 +418,21 @@ function makeSetpointRequest(mode, setpoint, setpoint2) {
     var dt = new ArrayBuffer(4);
     var dv = new DataView(dt);
 
-    setFloat32LEBS(dv, 0, setpoint);
+    modbus.setFloat32LEBS(dv, 0, setpoint);
     const sp = [dv.getUint16(0, false), dv.getUint16(2, false)];
 
     var dtInt = new ArrayBuffer(4);
     var dvInt = new DataView(dtInt);
-    setUint32LEBS(dvInt, 0, setpoint);
+    modbus.setUint32LEBS(dvInt, 0, setpoint);
     const spInt = [dvInt.getUint16(0, false), dvInt.getUint16(2, false)];
 
     switch (mode) {
         case CommandType.GEN_V:
         case CommandType.GEN_mV:
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.VoltageSetpoint, sp); // V / mV setpoint
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.VoltageSetpoint, sp); // V / mV setpoint
         case CommandType.GEN_mA_active:
         case CommandType.GEN_mA_passive:
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CurrentSetpoint, sp); // I setpoint
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CurrentSetpoint, sp); // I setpoint
         case CommandType.GEN_Cu50_3W:
         case CommandType.GEN_Cu50_2W:
         case CommandType.GEN_Cu100_2W:
@@ -447,7 +441,7 @@ function makeSetpointRequest(mode, setpoint, setpoint2) {
         case CommandType.GEN_PT100_2W:
         case CommandType.GEN_PT500_2W:
         case CommandType.GEN_PT1000_2W:
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.RTDTemperatureSetpoint, sp); // °C setpoint
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.RTDTemperatureSetpoint, sp); // °C setpoint
         case CommandType.GEN_THERMO_B:
         case CommandType.GEN_THERMO_E:
         case CommandType.GEN_THERMO_J:
@@ -457,9 +451,9 @@ function makeSetpointRequest(mode, setpoint, setpoint2) {
         case CommandType.GEN_THERMO_R:
         case CommandType.GEN_THERMO_S:
         case CommandType.GEN_THERMO_T:
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ThermoTemperatureSetpoint, sp); // °C setpoint
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ThermoTemperatureSetpoint, sp); // °C setpoint
         case CommandType.GEN_LoadCell:
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.LoadCellSetpoint, sp); // mV/V setpoint
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.LoadCellSetpoint, sp); // mV/V setpoint
         case CommandType.GEN_Frequency:
             dt = new ArrayBuffer(8); // 2 Uint32
             dv = new DataView(dt);
@@ -474,7 +468,7 @@ function makeSetpointRequest(mode, setpoint, setpoint2) {
             registers = [dv.getUint16(2, false), dv.getUint16(0, false),
             dv.getUint16(6, false), dv.getUint16(4, false)];
 
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.FrequencyTICK1, registers);
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.FrequencyTICK1, registers);
 
         case CommandType.GEN_PulseTrain:
             dt = new ArrayBuffer(12); // 3 Uint32 
@@ -492,24 +486,24 @@ function makeSetpointRequest(mode, setpoint, setpoint2) {
             dv.getUint16(6, false), dv.getUint16(4, false),
             dv.getUint16(10, false), dv.getUint16(8, false)];
 
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.PulsesCount, registers);
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.PulsesCount, registers);
         case CommandType.SET_UThreshold_F:
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ThresholdU_Freq, sp); // U min for freq measurement
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ThresholdU_Freq, sp); // U min for freq measurement
         case CommandType.SET_Sensitivity_uS:
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.Sensibility_uS_OFF,
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.Sensibility_uS_OFF,
                 [spInt[0], spInt[1], spInt[0], spInt[1]]); // uV for pulse train measurement to ON / OFF
         case CommandType.SET_ColdJunction:
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ColdJunction, sp); // unclear unit
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ColdJunction, sp); // unclear unit
         case CommandType.SET_Ulow:
-            setFloat32LEBS(dv, 0, setpoint / MAX_U_GEN); // Must convert V into a % 0..MAX_U_GEN
+            modbus.setFloat32LEBS(dv, 0, setpoint / MAX_U_GEN); // Must convert V into a % 0..MAX_U_GEN
             var sp2 = [dv.getUint16(0, false), dv.getUint16(2, false)];
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GenUlowPerc, sp2); // U low for freq / pulse gen
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GenUlowPerc, sp2); // U low for freq / pulse gen
         case CommandType.SET_Uhigh:
-            setFloat32LEBS(dv, 0, setpoint / MAX_U_GEN); // Must convert V into a % 0..MAX_U_GEN
+            modbus.setFloat32LEBS(dv, 0, setpoint / MAX_U_GEN); // Must convert V into a % 0..MAX_U_GEN
             var sp2 = [dv.getUint16(0, false), dv.getUint16(2, false)];
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GenUhighPerc, sp2); // U high for freq / pulse gen            
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GenUhighPerc, sp2); // U high for freq / pulse gen            
         case CommandType.SET_ShutdownDelay:
-            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.PowerOffDelay, setpoint); // delay in sec
+            return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.PowerOffDelay, setpoint); // delay in sec
         case CommandType.OFF:
             return null; // No setpoint
         default:
@@ -527,10 +521,10 @@ function makeSetpointRead(mode) {
     switch (mode) {
         case CommandType.GEN_V:
         case CommandType.GEN_mV:
-            return makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.VoltageSetpoint); // mV or V setpoint
+            return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.VoltageSetpoint); // mV or V setpoint
         case CommandType.GEN_mA_active:
         case CommandType.GEN_mA_passive:
-            return makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.CurrentSetpoint); // A setpoint
+            return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.CurrentSetpoint); // A setpoint
         case CommandType.GEN_Cu50_3W:
         case CommandType.GEN_Cu50_2W:
         case CommandType.GEN_Cu100_2W:
@@ -539,7 +533,7 @@ function makeSetpointRead(mode) {
         case CommandType.GEN_PT100_2W:
         case CommandType.GEN_PT500_2W:
         case CommandType.GEN_PT1000_2W:
-            return makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.RTDTemperatureSetpoint); // °C setpoint
+            return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.RTDTemperatureSetpoint); // °C setpoint
         case CommandType.GEN_THERMO_B:
         case CommandType.GEN_THERMO_E:
         case CommandType.GEN_THERMO_J:
@@ -549,12 +543,12 @@ function makeSetpointRead(mode) {
         case CommandType.GEN_THERMO_R:
         case CommandType.GEN_THERMO_S:
         case CommandType.GEN_THERMO_T:
-            return makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.ThermoTemperatureSetpoint); // °C setpoint
+            return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.ThermoTemperatureSetpoint); // °C setpoint
         case CommandType.GEN_Frequency:
         case CommandType.GEN_PulseTrain:
-            return makeFC3(SENECA_MB_SLAVE_ID, 4, MSCRegisters.FrequencyTICK1); // Frequency setpoint (TICKS)
+            return modbus.makeFC3(SENECA_MB_SLAVE_ID, 4, MSCRegisters.FrequencyTICK1); // Frequency setpoint (TICKS)
         case CommandType.GEN_LoadCell:
-            return makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.LoadCellSetpoint); // mV/V setpoint
+            return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.LoadCellSetpoint); // mV/V setpoint
         case CommandType.NONE_UNKNOWN:
         case CommandType.OFF:
             return null;
@@ -569,7 +563,7 @@ function makeSetpointRead(mode) {
  */
 function parseSetpointRead(registers, mode) {
     // Round to two digits
-    var rounded = Math.round(getFloat32LEBS(registers, 0) * 100) / 100;
+    var rounded = Math.round(modbus.getFloat32LEBS(registers, 0) * 100) / 100;
 
     switch (mode) {
         case CommandType.GEN_mA_active:
@@ -603,8 +597,8 @@ function parseSetpointRead(registers, mode) {
             };
         case CommandType.GEN_Frequency:
         case CommandType.GEN_PulseTrain:
-            var tick1 = getUint32LEBS(registers, 0);
-            var tick2 = getUint32LEBS(registers, 4);
+            var tick1 = modbus.getUint32LEBS(registers, 0);
+            var tick2 = modbus.getUint32LEBS(registers, 4);
             var fON = 0.0;
             var fOFF = 0.0;
             if (tick1 != 0)
@@ -653,4 +647,7 @@ function parseSetpointRead(registers, mode) {
 
 }
 
-module.exports = {MSCRegisters}
+module.exports = {
+    MSCRegisters, makeSerialNumber, makeCurrentMode, makeBatteryLevel, parseBattery, parseSerialNumber,
+    parseCurrentMode, makeModeRequest, makeMeasureRequest, parseMeasure, makeQualityBitRequest, isQualityValid,
+    makeGenStatusRead, parseGenStatus, makeSetpointRequest, makeSetpointRead, parseSetpointRead}

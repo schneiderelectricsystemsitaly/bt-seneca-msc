@@ -1,8 +1,11 @@
+'use strict';
+
+var log = require('loglevel');
+
 const SENECA_MB_SLAVE_ID = 25; // Modbus RTU slave ID
 
 /******************************** MODBUS STUFF ***********************************************/
-class CommandResult
-{
+class CommandResult {
     value = 0.0;
     result = false;
     message = "";
@@ -205,15 +208,7 @@ function parseFC16(response) {
     return [address, length];
 }
 
-/**
- * Helper function to dump arraybuffer as hex string
- * @param {ArrayBuffer} buffer
- */
-function buf2hex(buffer) { // buffer is an ArrayBuffer
-    return [...new Uint8Array(buffer)]
-        .map(x => x.toString(16).padStart(2, '0'))
-        .join(' ');
-}
+
 
 
 /**
@@ -222,7 +217,7 @@ function buf2hex(buffer) { // buffer is an ArrayBuffer
  * @param {number} offset byte number where float into the buffer
  * @returns {number} converted value
  */
- function getFloat32LEBS(dataView, offset) {
+function getFloat32LEBS(dataView, offset) {
     const buff = new ArrayBuffer(4);
     const dv = new DataView(buff);
     dv.setInt16(0, dataView.getInt16(offset + 2, false), false);
@@ -271,3 +266,5 @@ function setUint32LEBS(dataView, offset, value) {
     dataView.setInt16(offset, dv.getInt16(2, false), false);
     dataView.setInt16(offset + 2, dv.getInt16(0, false), false);
 }
+
+module.exports = { makeFC3, getFloat32LEBS, makeFC16, setFloat32LEBS, setUint32LEBS, parseFC3, parseFC16, parseFC16checked, ModbusError, SENECA_MB_SLAVE_ID }
