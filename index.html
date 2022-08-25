@@ -257,12 +257,12 @@
             var comm;
 
             if ($("#new_command_sp").hasClass('d-none')) {
-                comm = new MSC.Command(type);
+                comm = MSC.Command.CreateNoSP(type);
             }
             else if ($("#new_command_sp2").hasClass('d-none')) {
-                comm = new MSC.Command(type, setpoint1);
+                comm = MSC.Command.CreateOneSP(type, setpoint1);
             } else {
-                comm = new MSC.Command(type, [setpoint1, setpoint2]);
+                comm = MSC.Command.CreateTwoSP(type, setpoint1, setpoint2);
             }
 
             $("#resultExecute").text("Pending...");

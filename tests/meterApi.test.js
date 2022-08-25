@@ -1,5 +1,6 @@
-const MSC = require('bt-seneca-msc');
-const { CommandType } = require('./meterApi');
+const MeterState = require('../classes/MeterState');
+const MSC = require('../meterApi');
+var CommandType = MSC.CommandType;
 
 describe('Basic tests', () => {
     test('API functions exists', () => {
@@ -7,6 +8,13 @@ describe('Basic tests', () => {
         expect(MSC.Execute).not.toBeNull();
         expect(MSC.Stop).not.toBeNull();
         expect(MSC.GetState).not.toBeNull();
+        expect(MSC.SimpleExecute).not.toBeNull();
+    })
+
+    test('JSON API functions exists', () => {
+        expect(MSC.ExecuteJSON).not.toBeNull();
+        expect(MSC.GetStateJSON).not.toBeNull();
+        expect(MSC.SimpleExecuteJSON).not.toBeNull();
     })
     
     test('API exports exists', () => {
@@ -156,6 +164,40 @@ describe('Basic tests', () => {
         expect(result.setpoint).toBe(5);
         expect(result.setpoint2).toBe(10);
         
-    });
+    })
+    
+    test('SimpleExecute returns the right properties', async () => {
+        var comm = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 5.0);
+        let result = await MSC.SimpleExecute(comm);
+        expect(result).not.toBeNull();
+        expect(result).toHaveProperty('error');
+        expect(result).toHaveProperty('message');
+        expect(result).toHaveProperty('value');
+        
+        expect(result.error).toBeTruthy();
+        expect(result.message).not.toBeNull();
+    })
+
+    test('SimpleExecuteJSON returns the right properties', async () => {
+        var comm = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 5.0);
+        let result = JSON.parse(await MSC.SimpleExecuteJSON(JSON.stringify(comm)));
+        expect(result).not.toBeNull();
+        expect(result).toHaveProperty('error');
+        expect(result).toHaveProperty('message');
+        expect(result).toHaveProperty('value');
+        
+        expect(result.error).toBeTruthy();
+        expect(result.message).not.toBeNull();
+    })
+    
+    test('MeterState tests', async () => {
+        var state = new MeterState();
+        state.mode = MSC.CommandType.Cu50_2W;
+        expect(state.isMeasurement()).toBeTruthy();
+        expect(state.isGeneration()).toBeFalsy();
+        state.mode = MSC.CommandType.GEN_Cu100_2W
+        expect(state.isMeasurement()).toBeFalsy();
+        expect(state.isGeneration()).toBeTruthy();
+    })
 })
 
