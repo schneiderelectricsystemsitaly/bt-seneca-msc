@@ -1,5 +1,5 @@
-const MSC = require('bt-seneca-msc');
-const { CommandType } = require('./meterApi');
+const MSC = require('../meterApi');
+var CommandType = MSC.CommandType;
 
 describe('Basic tests', () => {
     test('API functions exists', () => {

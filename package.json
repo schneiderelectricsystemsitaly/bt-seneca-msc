@@ -9,7 +9,8 @@
     "url": "git+https://github.com/PBrunot/bt-seneca-msc.git"
   },
   "dependencies": {
-    "loglevel": "^1.0.0"
+    "loglevel": "^1.0.0",
+    "requirejs": "^2.3.6"
   },
   "devDependencies": {
     "browserify": "^17.0.0",
@@ -25,7 +26,7 @@
   "homepage": "https://github.com/PBrunot/bt-seneca-msc#readme",
   "scripts": {
     "test": "jest",
-    "dist": "browserify . --standalone MSC --debug | uglifyjs > ./dist/bt-seneca-msc.min.js",
-    "dev": "browserify . --standalone MSC --debug -o ./dist/bt-seneca-msc.js"
+    "dist": "browserify meterApi.js --standalone MSC --debug | uglifyjs > ./dist/bt-seneca-msc.min.js",
+    "dev": "browserify meterApi.js --standalone MSC --debug -o ./dist/bt-seneca-msc.js"
   }
 }
