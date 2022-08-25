@@ -1,6 +1,7 @@
 ﻿'use strict';
 
 const log = require("loglevel");
+log.setLevel(log.levels.ERROR, true);
 
 const constants = require('./constants');
 const APIState = require('./classes/APIState');
