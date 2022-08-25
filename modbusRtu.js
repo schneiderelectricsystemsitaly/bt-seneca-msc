@@ -1,15 +1,10 @@
 'use strict';
 
+/******************************** MODBUS RTU handling ***********************************************/
+
 var log = require('loglevel');
 
 const SENECA_MB_SLAVE_ID = 25; // Modbus RTU slave ID
-
-/******************************** MODBUS STUFF ***********************************************/
-class CommandResult {
-    value = 0.0;
-    result = false;
-    message = "";
-}
 
 class ModbusError extends Error {
     /**
@@ -22,6 +17,7 @@ class ModbusError extends Error {
         this.fc = fc;
     }
 }
+
 /**
  * Returns the 4 bytes CRC code from the buffer contents
  * @param {ArrayBuffer} buffer
@@ -267,4 +263,4 @@ function setUint32LEBS(dataView, offset, value) {
     dataView.setInt16(offset + 2, dv.getInt16(0, false), false);
 }
 
-module.exports = { makeFC3, getFloat32LEBS, makeFC16, setFloat32LEBS, setUint32LEBS, parseFC3, parseFC16, parseFC16checked, ModbusError, SENECA_MB_SLAVE_ID }
+module.exports = { makeFC3, getFloat32LEBS, makeFC16, setFloat32LEBS, setUint32LEBS, parseFC3, parseFC16, parseFC16checked, ModbusError, SENECA_MB_SLAVE_ID, getUint32LEBS }

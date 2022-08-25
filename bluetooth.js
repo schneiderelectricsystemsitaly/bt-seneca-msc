@@ -309,15 +309,15 @@ async function meterInit() {
     try {
         btState.state = State.METER_INITIALIZING;
         response = await SendAndResponse(seneca.makeSerialNumber());
-        btState.meter.serial = seneca.parseSerialNumber(modbus.parseFC3(response));
+        btState.meter.serial = seneca.parseSerialNumber(response);
         log.info('\t\tSerial number:' + btState.meter.serial);
 
         response = await SendAndResponse(seneca.makeCurrentMode());
-        btState.meter.mode = seneca.parseCurrentMode(modbus.parseFC3(response), CommandType.NONE_UNKNOWN);
+        btState.meter.mode = seneca.parseCurrentMode(response, CommandType.NONE_UNKNOWN);
         log.debug('\t\tCurrent mode:' + btState.meter.mode);
 
         response = await SendAndResponse(seneca.makeBatteryLevel());
-        btState.meter.battery = Math.round(seneca.parseBattery(modbus.parseFC3(response)) * 100) / 100;
+        btState.meter.battery = Math.round(seneca.parseBattery(response) * 100) / 100;
 
         btState.state = State.IDLE;
     }
@@ -529,7 +529,7 @@ async function refresh() {
     try {
         // Check the mode first
         var response = await SendAndResponse(seneca.makeCurrentMode());
-        var mode = seneca.parseCurrentMode(modbus.parseFC3(response), btState.meter.mode);
+        var mode = seneca.parseCurrentMode(response, btState.meter.mode);
 
         if (mode != CommandType.NONE_UNKNOWN) {
             btState.meter.mode = mode;
@@ -558,11 +558,11 @@ async function refresh() {
 async function refreshMeasure() {
     // Read quality
     var response = await SendAndResponse(seneca.makeQualityBitRequest());
-    var valid = seneca.isQualityValid(modbus.parseFC3(response));
+    var valid = seneca.isQualityValid(response);
 
     // Read measure
     response = await SendAndResponse(seneca.makeMeasureRequest(btState.meter.mode));
-    var meas = seneca.parseMeasure(modbus.parseFC3(response), btState.meter.mode);
+    var meas = seneca.parseMeasure(response, btState.meter.mode);
     meas["error"] = !valid;
 
     btState.lastMeasure = meas;
@@ -574,10 +574,10 @@ async function refreshMeasure() {
 async function refreshGeneration() {
     var response = await SendAndResponse(seneca.makeSetpointRead(btState.meter.mode));
     if (response != null) {
-        var results = seneca.parseSetpointRead(modbus.parseFC3(response), btState.meter.mode);
+        var results = seneca.parseSetpointRead(response, btState.meter.mode);
 
         response = await SendAndResponse(seneca.makeGenStatusRead());
-        results["error"] = !seneca.parseGenStatus(modbus.parseFC3(response), btState.meter.mode);
+        results["error"] = !seneca.parseGenStatus(response, btState.meter.mode);
 
         btState.lastSetpoint = results;
     }

@@ -73,18 +73,20 @@ function makeBatteryLevel() {
 
 /**
  * Parses the register with battery level
- * @param {ArrayBuffer} responseFC3 
+ * @param {ArrayBuffer} buffer FC3 answer 
  * @returns {number} battery level in V
  */
-function parseBattery(responseFC3) {
-    return modbus.getFloat32LEBS(responseFC3, 0);
+function parseBattery(buffer) {
+    var registers = modbus.parseFC3(buffer);
+    return modbus.getFloat32LEBS(registers, 0);
 }
 
 /**
  * Parse the Seneca MSC serial as per the UI interface
- * @param {DataView} registers values of the registers
+ * @param {ArrayBuffer} buffer modbus answer packet (FC3)
  */
-function parseSerialNumber(registers) {
+function parseSerialNumber(buffer) {
+    var registers = modbus.parseFC3(buffer);
     if (registers.length < 4) {
         throw new Error("Invalid serial number response");
     }
@@ -99,11 +101,12 @@ function parseSerialNumber(registers) {
 
 /**
  * Parses the state of the meter. May throw.
- * @param {ArrayBuffer} registers register value
+ * @param {ArrayBuffer} buffer modbus answer packet (FC3)
  * @param {CommandType} currentMode if the registers contains an IGNORE value, returns the current mode
  * @returns {CommandType} meter mode
  */
-function parseCurrentMode(registers, currentMode) {
+function parseCurrentMode(buffer, currentMode) {
+    var registers = modbus.parseFC3(buffer);
     if (registers.length < 2) {
         throw new Error("Invalid mode response");
     }
@@ -224,11 +227,12 @@ function makeMeasureRequest(mode) {
 
 /**
  * Parse the measure read from the meter
- * @param {ArrayBuffer} responseFC3 registers values from parsed modbus answer
+ * @param {ArrayBuffer} buffer modbus rtu answer (FC3)
  * @param {CommandType} mode current mode of the meter
  * @returns {array} an array with first element "Measure name (units)":Value, second Timestamp:acquisition
  */
-function parseMeasure(responseFC3, mode) {
+function parseMeasure(buffer, mode) {
+    var responseFC3 = modbus.parseFC3(buffer);
     var meas, meas2, min, max;
 
     // All measures are float
@@ -374,10 +378,11 @@ function makeQualityBitRequest(mode) {
 
 /**
  * Checks if the error bit status
- * @param {ArrayBuffer} responseFC3
+ * @param {ArrayBuffer} buffer
  * @returns {boolean} true if there is no error
  */
-function isQualityValid(responseFC3) {
+function isQualityValid(buffer) {
+    var responseFC3 = modbus.parseFC3(buffer);
     return ((responseFC3.getUint16(0, false) & (1 << 13)) == 0);
 }
 
@@ -395,7 +400,8 @@ function makeGenStatusRead(mode) {
  * @param {ArrayBuffer} responseFC3
  * @returns {boolean} true if there is no error
  */
-function parseGenStatus(responseFC3, mode) {
+function parseGenStatus(buffer, mode) {
+    var responseFC3 = modbus.parseFC3(buffer);
     switch (mode) {
         case CommandType.GEN_mA_active:
         case CommandType.GEN_mA_passive:
@@ -561,8 +567,9 @@ function makeSetpointRead(mode) {
  * @param {ArrayBuffer} registers FC3 parsed answer
  * @returns {number} the last setpoint
  */
-function parseSetpointRead(registers, mode) {
+function parseSetpointRead(buffer, mode) {
     // Round to two digits
+    var registers = modbus.parseFC3(buffer);
     var rounded = Math.round(modbus.getFloat32LEBS(registers, 0) * 100) / 100;
 
     switch (mode) {

@@ -222,7 +222,7 @@ async function Stop() {
         btState.stopRequest = true;    
         await utils.sleep(100);
     }
-
+    btState.command = null;
     btState.stopRequest = false;
     log.warn("Stopped on request.");
     return true;
