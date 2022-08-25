@@ -6,9 +6,10 @@ const log = require("loglevel");
  * This file contains the public API of the meter, i.e. the functions designed
  * to be called from third party code.
  * 1- Pair() : bool
- * 2- Execute(Command) : bool
+ * 2- Execute(Command) : bool + JSON version
  * 3- Stop() : bool
- * 4- GetState() : array
+ * 4- GetState() : array + JSON version
+ * 5- SimpleExecute(Command) : returns the updated measurement or null
  */
 
 /**
@@ -73,6 +74,76 @@ async function GetStateJSON() {
 async function ExecuteJSON(jsonCommand) {
     let command = JSON.parse(jsonCommand);
     return JSON.stringify(await Execute(command));
+}
+
+async function SimpleExecuteJSON(jsonCommand) {
+    let command = JSON.parse(jsonCommand);
+    return JSON.stringify(await SimpleExecute(command));
+}
+
+/**
+ * Execute a command and returns the measurement or setpoint with error flag and message
+ * @param {Command} command
+ */
+ async function SimpleExecute(command) {
+    const SIMPLE_EXECUTE_TIMEOUT_S = 40;
+    var cr = new CommandResult();
+
+    log.info("SimpleExecute called...");
+
+    if (command != null)
+        command.pending = true; // In case caller does not set pending flag
+
+    // Fails if not paired.
+    if (!btState.started) {
+        cr.error = true;
+        cr.message = "Device is not paired";
+        log.warn(cr.message);
+        return cr;
+    }
+
+    // Another command may be pending.
+    var delayS = 0;
+    if (btState.command != null && btState.command.pending) {
+        cr.error = true;
+        cr.message = "Another command is pending";
+        log.warn(cr.message);
+        return cr;
+    }
+
+    // Wait for completion of the command, or halt of the state machine
+    btState.command = command; 
+    if (command != null) {
+        await waitForTimeout(() => !command.pending || btState.state == State.STOPPED, SIMPLE_EXECUTE_TIMEOUT_S);
+    }
+
+    if (command.error || command.pending)  // Check if error or timeouts
+    {
+        cr.error = true;
+        cr.message = "Error while executing the command."
+        log.warn(cr.message);
+        
+        // Reset the active command
+        btState.command = null;
+        
+        return cr;
+    }
+
+    // State is updated by execute command
+    if (isGeneration(command.type))
+    {
+        cr.value = btState.lastSetpoint["Value"];
+    }
+    else if (isMeasurement(command.type))
+    {
+        cr.value = btState.lastMeasure["Value"];
+    }
+    else
+    {
+        cr.value = 0.0; // Settings.
+    }
+    cr.message = "Command executed successfully";
+    return cr;
 }
 
 /**
@@ -152,6 +223,12 @@ async function Stop() {
 }
 
 /******************************** MODBUS STUFF ***********************************************/
+class CommandResult
+{
+    value = 0.0;
+    result = false;
+    message = "";
+}
 
 class ModbusError extends Error {
     /**
@@ -702,6 +779,17 @@ class Command {
 let sleep = ms => new Promise(r => setTimeout(r, ms));
 let waitFor = async function waitFor(f) {
     while (!f()) await sleep(100 + Math.random() * 25);
+    return f();
+};
+
+let waitForTimeout = async function waitFor(f, timeoutSec) {
+    var totalTimeMs = 0;
+    while (!f() && totalTimeMs < timeoutSec * 1000) 
+    {
+        var delayMs = 100 + Math.random() * 25;
+        totalTimeMs += delayMs;
+        await sleep(delayMs);
+    }
     return f();
 };
 
