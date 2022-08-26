@@ -174,7 +174,7 @@ describe('Basic tests', () => {
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('value');
         
-        expect(result.error).toBeTruthy();
+        expect(result.success).toBeFalsy();
         expect(result.message).not.toBeNull();
     })
 
@@ -186,7 +186,7 @@ describe('Basic tests', () => {
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('value');
         
-        expect(result.error).toBeTruthy();
+        expect(result.success).toBeFalsy();
         expect(result.message).not.toBeNull();
     })
     
