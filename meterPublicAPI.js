@@ -136,11 +136,11 @@ async function SimpleExecuteJSON(jsonCommand) {
     }
 
     // State is updated by execute command
-    if (isGeneration(command.type))
+    if (utils.isGeneration(command.type))
     {
         cr.value = btState.lastSetpoint["Value"];
     }
-    else if (isMeasurement(command.type))
+    else if (utils.isMeasurement(command.type))
     {
         cr.value = btState.lastMeasure["Value"];
     }
