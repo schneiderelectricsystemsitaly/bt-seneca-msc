@@ -19,7 +19,11 @@ let waitForTimeout = async function waitFor(f, timeoutSec) {
 
 // These functions must exist stand-alone outside Command object as this object may come from JSON without them!
 function isGeneration(ctype) {
-    return (ctype > CommandType.OFF && ctype < CommandType.GEN_RESERVED);
+    return (ctype >= CommandType.OFF && ctype < CommandType.GEN_RESERVED || isCustomGeneration(ctype));
+}
+function isCustomGeneration(ctype) 
+{
+    return (ctype > CommandType.GEN_RESERVED && ctype < CommandType.GEN_RESERVED_END);
 }
 function isMeasurement(ctype) {
     return (ctype > CommandType.NONE_UNKNOWN && ctype < CommandType.RESERVED);

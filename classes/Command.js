@@ -94,6 +94,8 @@ const MAX_U_GEN = 27.0; // maximum voltage
                 return { 'U high (V)': 5.0 / MAX_U_GEN };
             case CommandType.SET_ShutdownDelay:
                 return { 'Delay (s)': 60 * 5 };
+            case CommandType.GEN_Custom_Switch:
+                return { 'Switch (0=open, 1=close)' : 0};
             default:
                 return {};
         }

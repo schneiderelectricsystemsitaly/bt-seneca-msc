@@ -147,7 +147,7 @@ async function processCommand() {
 
         // First set NONE because we don't want to write new setpoints with active generation
         log.debug("\t\tSetting meter to OFF");
-        packet = seneca.makeModeRequest(CommandType.OFF);
+        packet = seneca.makeModeRequest(CommandType.OFF, 0);
         await SendAndResponse(packet);
         await utils.sleep(100);
 
@@ -177,7 +177,7 @@ async function processCommand() {
         {
             // Now write the mode set 
             log.debug("\t\tSetting new mode :" + command.type);
-            packet = seneca.makeModeRequest(command.type);
+            packet = seneca.makeModeRequest(command.type, command.setpoint);
             if (packet == null) {
                 command.error = true;
                 command.pending = false;
@@ -313,7 +313,8 @@ async function meterInit() {
         log.info('\t\tSerial number:' + btState.meter.serial);
 
         response = await SendAndResponse(seneca.makeCurrentMode());
-        btState.meter.mode = seneca.parseCurrentMode(response, CommandType.NONE_UNKNOWN);
+        btState.meter.mode = seneca.parseCurrentMode(response, 
+            (btState.command != null) ? btState.command.type : CommandType.NONE_UNKNOWN);
         log.debug('\t\tCurrent mode:' + btState.meter.mode);
 
         response = await SendAndResponse(seneca.makeBatteryLevel());
@@ -572,9 +573,9 @@ async function refreshMeasure() {
  * Gets the current values for the generated U,I from the device
  * */
 async function refreshGeneration() {
-    var response = await SendAndResponse(seneca.makeSetpointRead(btState.meter.mode));
+    var response = await SendAndResponse(seneca.makeSetpointRead(btState.meter.mode, btState.lastSetpoint["Value"]));
     if (response != null) {
-        var results = seneca.parseSetpointRead(response, btState.meter.mode);
+        var results = seneca.parseSetpointRead(response, btState.meter.mode, btState.lastSetpoint["Value"]);
 
         response = await SendAndResponse(seneca.makeGenStatusRead());
         results["error"] = !seneca.parseGenStatus(response, btState.meter.mode);
