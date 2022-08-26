@@ -1,7 +1,7 @@
 class CommandResult
 {
     value = 0.0;
-    result = false;
+    success = false;
     message = "";
 }
 

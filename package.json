@@ -1,6 +1,6 @@
 {
   "name": "bt-seneca-msc",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "A pure Javascript API for the Seneca Multi Smart Calibrator (MSC) device, using web bluetooth.",
   "main": "js/meterApi.js",
   "keywords": ["web-bluetooth", "seneca", "multi smart calibrator", "MSC", "javascript", "API", "bluetooth", "metering", "measurements", "automation", "testing"],

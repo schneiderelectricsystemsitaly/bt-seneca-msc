@@ -170,7 +170,7 @@ describe('Basic tests', () => {
         var comm = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 5.0);
         let result = await MSC.SimpleExecute(comm);
         expect(result).not.toBeNull();
-        expect(result).toHaveProperty('error');
+        expect(result).toHaveProperty('success');
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('value');
         
@@ -182,7 +182,7 @@ describe('Basic tests', () => {
         var comm = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 5.0);
         let result = JSON.parse(await MSC.SimpleExecuteJSON(JSON.stringify(comm)));
         expect(result).not.toBeNull();
-        expect(result).toHaveProperty('error');
+        expect(result).toHaveProperty('success');
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('value');
         

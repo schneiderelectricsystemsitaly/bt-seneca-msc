@@ -102,7 +102,7 @@ async function SimpleExecuteJSON(jsonCommand) {
 
     // Fails if not paired.
     if (!btState.started) {
-        cr.error = true;
+        cr.success = false;
         cr.message = "Device is not paired";
         log.warn(cr.message);
         return cr;
@@ -111,7 +111,7 @@ async function SimpleExecuteJSON(jsonCommand) {
     // Another command may be pending.
     var delayS = 0;
     if (btState.command != null && btState.command.pending) {
-        cr.error = true;
+        cr.success = false;
         cr.message = "Another command is pending";
         log.warn(cr.message);
         return cr;
@@ -125,7 +125,7 @@ async function SimpleExecuteJSON(jsonCommand) {
 
     if (command.error || command.pending)  // Check if error or timeouts
     {
-        cr.error = true;
+        cr.success = false;
         cr.message = "Error while executing the command."
         log.warn(cr.message);
         
@@ -148,6 +148,7 @@ async function SimpleExecuteJSON(jsonCommand) {
     {
         cr.value = 0.0; // Settings.
     }
+    cr.success = true;
     cr.message = "Command executed successfully";
     return cr;
 }
