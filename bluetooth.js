@@ -244,13 +244,13 @@ async function processCommand() {
 
         } // if (!isSetting(command.type) && isValid(command.type)))
 
-        command.error = false;
-        command.pending = false;
-        btState.command = null;
-
         // Caller expects a valid property in GetState() once command is executed.
         log.debug("\t\tRefreshing current state");
         await refresh();
+
+        command.error = false;
+        command.pending = false;
+        btState.command = null;
 
         btState.state = State.IDLE;
         log.debug("\t\tCompleted command executed");
