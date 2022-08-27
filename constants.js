@@ -67,8 +67,6 @@
     GEN_Frequency: 136,
     GEN_PulseTrain: 137,
     GEN_RESERVED: 138,
-    GEN_Custom_Switch : 500,
-    GEN_RESERVED_END: 999,
     // Special settings below this points
     SETTING_RESERVED: 1000,
     SET_UThreshold_F: 1001,

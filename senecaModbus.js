@@ -5,7 +5,6 @@
 var modbus = require('./modbusRtu');
 var constants = require('./constants');
 var utils = require('./utils');
-var APIState = require('./classes/APIState');
 
 var CommandType = constants.CommandType;
 const SENECA_MB_SLAVE_ID = modbus.SENECA_MB_SLAVE_ID; // Modbus RTU slave ID
@@ -116,10 +115,6 @@ function parseCurrentMode(buffer, currentMode) {
     if (val1 == CommandType.RESERVED || val1 == CommandType.GEN_RESERVED || val1 == CommandType.RESERVED_2) { // Must be ignored
         return currentMode;
     }
-    if (currentMode == CommandType.GEN_Custom_Switch && (val1 == CommandType.OFF || val1.CommandType == CommandType.GEN_PT100_2W))
-    {
-        return currentMode;
-    }
     const value = utils.Parse(CommandType, val1);
     if (value == null)
         throw new Error("Unknown meter mode : " + value);
@@ -131,7 +126,7 @@ function parseCurrentMode(buffer, currentMode) {
  * @param {number} mode
  * @returns {ArrayBuffer|null}
  */
-function makeModeRequest(mode, lastSetpoint) {
+function makeModeRequest(mode) {
     const value = utils.Parse(CommandType, mode);
     const CHANGE_STATUS = 1;
 
@@ -140,21 +135,11 @@ function makeModeRequest(mode, lastSetpoint) {
         return null;
     }
 
-    if (utils.isMeasurement(mode)) { // Measurements
+    if (mode > CommandType.NONE_UNKNOWN && mode <= CommandType.OFF) { // Measurements
         return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [CHANGE_STATUS, mode]);
     }
-    else if (utils.isGeneration(mode)) { // Generations
+    else if (mode > CommandType.OFF && mode < CommandType.GEN_RESERVED) { // Generations
         switch (mode) {
-            case CommandType.GEN_Custom_Switch:
-                APIState.btState.meter.mode = CommandType.GEN_Custom_Switch;
-                if (Math.abs(lastSetpoint - 1) < 0.1) {
-                    // Request to close
-                    return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [CHANGE_STATUS, CommandType.GEN_PT100_2W]);
-                }
-                else {
-                    // Request to open
-                    return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [CHANGE_STATUS, CommandType.OFF]);
-                }
             case CommandType.GEN_THERMO_B:
             case CommandType.GEN_THERMO_E:
             case CommandType.GEN_THERMO_J:
@@ -439,10 +424,6 @@ function makeSetpointRequest(mode, setpoint, setpoint2) {
     var dt = new ArrayBuffer(4);
     var dv = new DataView(dt);
 
-    if (CommandType.GEN_Custom_Switch == mode && Math.abs(setpoint-1) < 0.1) {
-        setpoint = -199.0;
-    }
-
     modbus.setFloat32LEBS(dv, 0, setpoint);
     const sp = [dv.getUint16(0, false), dv.getUint16(2, false)];
 
@@ -458,15 +439,6 @@ function makeSetpointRequest(mode, setpoint, setpoint2) {
         case CommandType.GEN_mA_active:
         case CommandType.GEN_mA_passive:
             return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CurrentSetpoint, sp); // I setpoint
-        case CommandType.GEN_Custom_Switch:
-            if (Math.abs(setpoint-1) < 0.1) {
-                // request to close the circuit
-                return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.RTDTemperatureSetpoint, sp); 
-            }
-            else {
-                // request to open the circuit
-                return null;
-            }
         case CommandType.GEN_Cu50_3W:
         case CommandType.GEN_Cu50_2W:
         case CommandType.GEN_Cu100_2W:
@@ -551,7 +523,7 @@ function makeSetpointRequest(mode, setpoint, setpoint2) {
  * @param {CommandType} mode
  * @returns {ArrayBuffer} modbus RTU request
  */
-function makeSetpointRead(mode, lastSetpoint) {
+function makeSetpointRead(mode) {
     switch (mode) {
         case CommandType.GEN_V:
         case CommandType.GEN_mV:
@@ -583,15 +555,6 @@ function makeSetpointRead(mode, lastSetpoint) {
             return modbus.makeFC3(SENECA_MB_SLAVE_ID, 4, MSCRegisters.FrequencyTICK1); // Frequency setpoint (TICKS)
         case CommandType.GEN_LoadCell:
             return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.LoadCellSetpoint); // mV/V setpoint
-        case CommandType.GEN_Custom_Switch:
-            if (Math.abs(lastSetpoint-1)< 0.1) {
-                // Command to close
-                return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.RTDTemperatureSetpoint); // °C setpoint
-            }
-            else
-            {
-                return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.CurrentMode); // returns the mode
-            }
         case CommandType.NONE_UNKNOWN:
         case CommandType.OFF:
             return null;
@@ -604,34 +567,12 @@ function makeSetpointRead(mode, lastSetpoint) {
  * @param {ArrayBuffer} registers FC3 parsed answer
  * @returns {number} the last setpoint
  */
-function parseSetpointRead(buffer, mode, lastSetpoint) {
+function parseSetpointRead(buffer, mode) {
     // Round to two digits
     var registers = modbus.parseFC3(buffer);
     var rounded = Math.round(modbus.getFloat32LEBS(registers, 0) * 100) / 100;
-    const iVal = registers.getUint16(0, false);
 
     switch (mode) {
-        case CommandType.GEN_Custom_Switch:
-            if (Math.abs(lastSetpoint - 1 ) < 0.1) 
-            {
-                // Request to close
-                return {
-                    "Description": "Circuit switch",
-                    "Value": (rounded > 100) ? 1 : 0,
-                    "Unit": "N/A",
-                    "Timestamp": new Date().toISOString()
-                };
-            }
-            else
-            {
-                // request to open
-                return {
-                    "Description": "Circuit switch",
-                    "Value": (iVal == CommandType.OFF) ? 0 : 1,
-                    "Unit": "N/A",
-                    "Timestamp": new Date().toISOString()
-                };
-            }
         case CommandType.GEN_mA_active:
         case CommandType.GEN_mA_passive:
             return {
