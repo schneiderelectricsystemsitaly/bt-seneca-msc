@@ -112,7 +112,7 @@ function parseCurrentMode(buffer, currentMode) {
     }
     const val1 = registers.getUint16(0, false);
 
-    if (val1 == CommandType.RESERVED || val1 == CommandType.GEN_RESERVED || val1 == CommandType.RESERVED_2) { // Must be ignored
+    if (val1 == CommandType.RESERVED || val1 == CommandType.GEN_RESERVED || val1 == CommandType.RESERVED_2) { // Must be ignored, internal states of the meter
         return currentMode;
     }
     const value = utils.Parse(CommandType, val1);

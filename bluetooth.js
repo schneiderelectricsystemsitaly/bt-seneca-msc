@@ -10,7 +10,6 @@ var modbus = require('./modbusRtu');
 var btState = APIState.btState;
 var State = constants.State;
 var CommandType = constants.CommandType;
-var buf2hex = utils.buf2hex;
 
 /*
  * Bluetooth constants
@@ -173,7 +172,8 @@ async function processCommand() {
             }
         }
 
-        if (!utils.isSetting(command.type) && utils.isValid(command.type) && command.type != CommandType.OFF)  // IF this is a setting, we're done.
+        if (!utils.isSetting(command.type) && 
+            utils.isValid(command.type) && command.type != CommandType.OFF)  // IF this is a setting, we're done.
         {
             // Now write the mode set 
             log.debug("\t\tSetting new mode :" + command.type);
@@ -275,7 +275,7 @@ async function SendAndResponse(command) {
     if (command == null)
         return null;
 
-    log.debug(">> " + buf2hex(command));
+    log.debug(">> " + utils.buf2hex(command));
 
     btState.response = null;
     btState.stats["requests"]++;
@@ -392,7 +392,7 @@ function arrayBufferConcat() {
 function handleNotifications(event) {
     let value = event.target.value;
     if (value != null) {
-        log.debug('<< ' + buf2hex(value.buffer));
+        log.debug('<< ' + utils.buf2hex(value.buffer));
         if (btState.response != null) {
             btState.response = arrayBufferConcat(btState.response, value.buffer);
         } else {

@@ -92,15 +92,21 @@ async function SimpleExecuteJSON(jsonCommand) {
  * @param {Command} command
  */
  async function SimpleExecute(command) {
-    const SIMPLE_EXECUTE_TIMEOUT_S = 40;
+    const SIMPLE_EXECUTE_TIMEOUT_S = 5;
     var cr = new CommandResult();
 
     log.info("SimpleExecute called...");
 
-    if (command != null)
-        command.pending = true; // In case caller does not set pending flag
+    if (command == null)
+    {
+        cr.success = false;
+        cr.message = "Invalid command";
+        return cr;
+    }
 
-    // Fails if not paired.
+    command.pending = true; // In case caller does not set pending flag
+
+    // Fail immediately if not paired.
     if (!btState.started) {
         cr.success = false;
         cr.message = "Device is not paired";
@@ -109,7 +115,6 @@ async function SimpleExecuteJSON(jsonCommand) {
     }
 
     // Another command may be pending.
-    var delayS = 0;
     if (btState.command != null && btState.command.pending) {
         cr.success = false;
         cr.message = "Another command is pending";
@@ -123,7 +128,8 @@ async function SimpleExecuteJSON(jsonCommand) {
         await utils.waitForTimeout(() => !command.pending || btState.state == State.STOPPED, SIMPLE_EXECUTE_TIMEOUT_S);
     }
 
-    if (command.error || command.pending)  // Check if error or timeouts
+    // Check if error or timeouts
+    if (command.error || command.pending)  
     {
         cr.success = false;
         cr.message = "Error while executing the command."
@@ -131,11 +137,10 @@ async function SimpleExecuteJSON(jsonCommand) {
         
         // Reset the active command
         btState.command = null;
-        
         return cr;
     }
 
-    // State is updated by execute command
+    // State is updated by execute command, so we can use btState right away
     if (utils.isGeneration(command.type))
     {
         cr.value = btState.lastSetpoint["Value"];
@@ -146,8 +151,9 @@ async function SimpleExecuteJSON(jsonCommand) {
     }
     else
     {
-        cr.value = 0.0; // Settings.
+        cr.value = 0.0; // Settings commands;
     }
+
     cr.success = true;
     cr.message = "Command executed successfully";
     return cr;
@@ -162,8 +168,10 @@ async function SimpleExecuteJSON(jsonCommand) {
 async function Execute(command) {
     log.info("Execute called...");
 
-    if (command != null)
-        command.pending = true;
+    if (command == null)
+        return null;
+        
+    command.pending = true;
 
     var cpt = 0;
     while (btState.command != null && btState.command.pending && cpt < 30) {
@@ -171,6 +179,7 @@ async function Execute(command) {
         await utils.sleep(1000);
         cpt++;
     }
+    
     log.info("Setting new command :" + command);
     btState.command = command;
 
@@ -184,6 +193,7 @@ async function Execute(command) {
     if (command != null) {
         await utils.waitFor(() => !command.pending || btState.state == State.STOPPED);
     }
+    
     // Return the command object result
     return command;
 }

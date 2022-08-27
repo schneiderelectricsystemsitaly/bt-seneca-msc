@@ -1,22 +1,12 @@
 ﻿'use strict';
 
 const log = require("loglevel");
-log.setLevel(log.levels.ERROR, true);
-
 const constants = require('./constants');
 const APIState = require('./classes/APIState');
 const Command = require('./classes/Command');
-require('./classes/MeterState');
-require('./modbusRtu');
-require('./senecaModbus');
 const PublicAPI =require('./meterPublicAPI');
-require('./bluetooth');
-require('./utils');
 
-/**
- * The main object with the state of meter, bluetooth, command...
- * */
-
+log.setLevel(log.levels.ERROR, true);
 
 exports.Stop = PublicAPI.Stop;
 exports.Pair = PublicAPI.Pair;
