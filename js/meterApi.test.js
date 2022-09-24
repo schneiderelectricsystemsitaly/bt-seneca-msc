@@ -61,7 +61,7 @@ describe('Basic tests', () => {
     })
         
     test('Pair fails (not in browser)', async () => {
-        const result = await MSC.Pair();
+        const result = await MSC.Pair(false);
         // Will fail without navigator object
         expect(result).toBeFalsy();
 
@@ -69,6 +69,15 @@ describe('Basic tests', () => {
         expect(data.status).toBe(MSC.State.STOPPED);
         expect(data.ready).toBeFalsy();
         expect(data.initializing).toBeFalsy();
+
+        const result2 = await MSC.Pair(true);
+        // Will fail without navigator object
+        expect(result2).toBeFalsy();
+
+        const data2 = await MSC.GetState();
+        expect(data2.status).toBe(MSC.State.STOPPED);
+        expect(data2.ready).toBeFalsy();
+        expect(data2.initializing).toBeFalsy();
     })
     
     test('Measurement execution fails', async () => {
@@ -81,10 +90,17 @@ describe('Basic tests', () => {
     
     test('Generation execution fails', async () => {
         const command = new MSC.Command(MSC.CommandType.GEN_V, 1.23);
-        const result = await MSC.Execute(command);
-        expect(result).not.toBeNull();
-        // Will stay pending since the state machine is not running
-        expect(result.pending).toBeTruthy();
+        try
+        {
+            const result = await MSC.Execute(command);
+            expect(result).not.toBeNull();
+            // Will stay pending since the state machine is not running
+            expect(result.pending).toBeTruthy();
+        }
+        catch(e)
+        {
+          // Will throw without Pair   
+        }
     })   
 
     test('Command.getDefaultSetpoint and Command properties', async () => {
@@ -108,27 +124,29 @@ describe('Basic tests', () => {
         const data = await MSC.GetState();
         expect(data.lastMeasure).not.toBeNull();
         expect(data.lastSetpoint).not.toBeNull();
-        expect(Array.isArray(data.lastMeasure)).toBeTruthy();
-        expect(Array.isArray(data.lastSetpoint)).toBeTruthy();
+        expect(typeof data.lastMeasure).toBe('object');
+        expect(typeof data.lastSetpoint).toBe('object');
     })
 
     test('JSON Execute works', async () => {
-        var comm = new MSC.Command(MSC.CommandType.GEN_V);
-        var setpoint = 5.0;
-        var result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm), JSON.stringify(setpoint)));
+        var comm = new MSC.Command(MSC.CommandType.GEN_V, 5.0);
+        var result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm)));
         expect(result).toHaveProperty('error');
         expect(result).toHaveProperty('pending');
+        expect(result).toHaveProperty('setpoint');
         expect(result.pending).toBeTruthy();
+        expect(result.setpoint).toBe(5.0);
 
-        comm = new MSC.Command(MSC.CommandType.GEN_PulseTrain);
-        setpoint = [5,10];
-        result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm), JSON.stringify(setpoint)));
+        comm = new MSC.Command(MSC.CommandType.GEN_PulseTrain, [5, 10]);
+        result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm)));
 
         expect(result).toHaveProperty('error');
         expect(result).toHaveProperty('pending');
+        expect(result).toHaveProperty('setpoint');
         expect(result.pending).toBeTruthy();
-
-        result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm), JSON.stringify(setpoint)));
+        expect(result.setpoint[0]).toBe(5);
+        expect(result.setpoint[1]).toBe(10);
+        
     });
 })
 

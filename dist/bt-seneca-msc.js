@@ -366,14 +366,13 @@ async function GetStateJSON() {
 }
 
 /**
- * 
- * @param {string} jsonCommand 
+ * Execute command with setpoints, JSON version
+ * @param {string} jsonCommand the command to execute
  * @returns {string} JSON command object
  */
- async function ExecuteJSON(jsonCommand, jsonSetpoint) {
+async function ExecuteJSON(jsonCommand) {
     let command = JSON.parse(jsonCommand);
-    let setpoint = JSON.parse(jsonSetpoint);
-    return JSON.stringify(await Execute(command, setpoint));
+    return JSON.stringify(await Execute(command));
 }
 
 /**
@@ -400,7 +399,7 @@ async function Execute(command) {
     // Start the regular state machine
     if (!btState.started) {
         btState.state = State.NOT_CONNECTED;
-        stateMachine();
+        await stateMachine();
     }
 
     // Wait for completion of the command, or halt of the state machine
@@ -415,8 +414,11 @@ async function Execute(command) {
  * MUST BE CALLED FROM A USER GESTURE EVENT HANDLER
   * @returns {boolean} true if meter is ready to execute command
  * */
-async function Pair() {
-    log.info("Pair called...");
+async function Pair(forceSelection=false) {
+    log.info("Pair("+forceSelection+") called...");
+    
+    btState.options["forceDeviceSelection"] = forceSelection;
+
     if (!btState.started) {
         btState.state = State.NOT_CONNECTED;
         stateMachine(); // Start it
@@ -436,9 +438,15 @@ async function Stop() {
     log.info("Stop request received");
 
     btState.stopRequest = true;
-    await waitFor(() => !btState.started);
-    btState.stopRequest = false;
+    await sleep(100);
 
+    while(btState.started || (btState.state != State.STOPPED && btState.state != State.NOT_CONNECTED))
+    {
+        btState.stopRequest = true;    
+        await sleep(100);
+    }
+
+    btState.stopRequest = false;
     log.warn("Stopped on request.");
     return true;
 }
@@ -730,6 +738,7 @@ const CommandType = {
     SET_ColdJunction: 1003,
     SET_Ulow: 1004,
     SET_Uhigh: 1005,
+    SET_ShutdownDelay: 1006
 };
 
 /*
@@ -749,6 +758,8 @@ const MSCRegisters = {
     MinMeasure: 132,
     MaxMeasure: 134,
     InstantMeasure: 136,
+    PowerOffDelay: 142,
+    PowerOffRemaining: 146,
     PulseOFFMeasure: 150,
     PulseONMeasure: 152,
     Sensibility_uS_OFF: 166,
@@ -808,8 +819,8 @@ class APIState {
 
         this.started = false; // State machine status
         this.stopRequest = false; // To request disconnect
-        this.lastMeasure = []; // Array with "MeasureName" : value
-        this.lastSetpoint = []; // Array with "SetpointType" : value
+        this.lastMeasure = {}; // Array with "MeasureName" : value
+        this.lastSetpoint = {}; // Array with "SetpointType" : value
 
         // state of connected meter
         this.meter = new MeterState();
@@ -837,8 +848,12 @@ class APIState {
             "commands": 0,
             "responseTime": 0.0,
             "lastResponseTime": 0.0,
-            "last_connect": new Date(2020, 1, 1)
+            "last_connect": new Date(2020, 1, 1).toISOString()
         };
+
+        this.options = {
+            "forceDeviceSelection" : true
+        }
     }
 }
 
@@ -853,13 +868,27 @@ class MeterState {
         this.battery = 0.0;
     }
 
-    isMeasuring() {
+    isMeasurement() {
         return this.mode > CommandType.NONE_UNKNOWN && this.mode < CommandType.OFF;
     }
 
-    isGenerating() {
+    isGeneration() {
         return this.mode > CommandType.OFF && this.mode < CommandType.GEN_RESERVED;
     }
+}
+
+// These functions must exist stand-alone outside Command object as this object may come from JSON without them!
+function isGeneration(ctype) {
+    return (ctype > CommandType.OFF && ctype < CommandType.GEN_RESERVED);
+}
+function isMeasurement(ctype) {
+    return (ctype > CommandType.NONE_UNKNOWN && ctype < CommandType.RESERVED);
+}
+function isSetting(ctype) {
+    return (ctype == CommandType.OFF || ctype > CommandType.SETTING_RESERVED);
+}
+function isValid(ctype) {
+    return (isMeasurement(ctype) || isGeneration(ctype) || isSetting(ctype));
 }
 
 /**
@@ -883,18 +912,6 @@ class Command {
         return "Type: " + Parse(CommandType, this.type) + ", setpoint:" + this.setpoint + ", pending:" + this.pending + ", error:" + this.error;
     }
 
-    isMeasurement() {
-        return (this.type > CommandType.NONE_UNKNOWN && this.type < CommandType.RESERVED);
-    }
-    isGeneration() {
-        return (this.type > CommandType.OFF && this.type < CommandType.GEN_RESERVED);
-    }
-    isSetting() {
-        return (this.type > CommandType.SETTING_RESERVED);
-    }
-    isValid() {
-        return (this.isMeasurement() || this.isGeneration() || this.isSetting());
-    }
     /**
      * Gets the default setpoint for this command type
      * @returns {Array} setpoint(s) expected
@@ -942,9 +959,23 @@ class Command {
                 return { 'U low (V)': 0.0 / MAX_U_GEN };
             case CommandType.SET_Uhigh:
                 return { 'U high (V)': 5.0 / MAX_U_GEN };
+            case CommandType.SET_ShutdownDelay:
+                return { 'Delay (s)': 60 * 5 };
             default:
                 return {};
         }
+    }
+    isGeneration() {
+        return isGeneration(this.type);
+    }
+    isMeasurement() {
+        return isMeasurement(this.type);
+    }
+    isSetting() {
+        return isSetting(this.type);
+    }
+    isValid() {
+        return (isMeasurement(this.type) || isGeneration(this.type) || isSetting(this.type));
     }
 }
 
@@ -1103,6 +1134,7 @@ function parseCurrentMode(registers, currentMode) {
  */
 function makeModeRequest(mode) {
     const value = Parse(CommandType, mode);
+    const CHANGE_STATUS = 1;
 
     // Filter invalid commands
     if (value == null || value == CommandType.NONE_UNKNOWN) {
@@ -1110,7 +1142,7 @@ function makeModeRequest(mode) {
     }
 
     if (mode > CommandType.NONE_UNKNOWN && mode <= CommandType.OFF) { // Measurements
-        return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [1, mode]);
+        return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [CHANGE_STATUS, mode]);
     }
     else if (mode > CommandType.OFF && mode < CommandType.GEN_RESERVED) { // Generations
         switch (mode) {
@@ -1124,7 +1156,7 @@ function makeModeRequest(mode) {
             case CommandType.GEN_THERMO_S:
             case CommandType.GEN_THERMO_T:
                 // Cold junction not configured
-                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [1, mode]);
+                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [CHANGE_STATUS, mode]);
             case CommandType.GEN_Cu50_3W:
             case CommandType.GEN_Cu50_2W:
             case CommandType.GEN_Cu100_2W:
@@ -1135,7 +1167,7 @@ function makeModeRequest(mode) {
             case CommandType.GEN_PT1000_2W:
             default:
                 // All the simple cases 
-                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [1, mode]);
+                return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [CHANGE_STATUS, mode]);
         }
 
     }
@@ -1222,7 +1254,13 @@ function parseMeasure(responseFC3, mode) {
         case CommandType.THERMO_R:
         case CommandType.THERMO_S:
             meas = getFloat32LEBS(responseFC3, 0);
-            return { "Temperature (°C)": Math.round(meas * 100) / 100, "Timestamp": new Date() };
+            var value = Math.round(meas * 100) / 100
+            return {
+                "Description": "Temperature",
+                "Value": value,
+                "Unit": "°C",
+                "Timestamp": new Date().toISOString()
+            };
         case CommandType.Cu50_2W:
         case CommandType.Cu50_3W:
         case CommandType.Cu50_4W:
@@ -1247,16 +1285,22 @@ function parseMeasure(responseFC3, mode) {
             meas = getFloat32LEBS(responseFC3, 0);
             meas2 = getFloat32LEBS(responseFC3, 4);
             return {
-                "Temperature RTD (°C)": Math.round(meas * 10) / 10,
-                "RTD (Ohms)": Math.round(meas2 * 10) / 10,
-                "Timestamp": new Date()
+                "Description": "Temperature",
+                "Value": Math.round(meas * 10) / 10,
+                "Unit": "°C",
+                "SecondaryDescription": "Resistance",
+                "SecondaryValue": Math.round(meas2 * 10) / 10,
+                "SecondaryUnit": "Ohms",
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.Frequency:
             meas = getFloat32LEBS(responseFC3, 0);
             // Sensibilità mancanti
             return {
-                "Frequency (Hz)": Math.round(meas * 10) / 10,
-                "Timestamp": new Date()
+                "Description": "Frequency",
+                "Value": Math.round(meas * 10) / 10,
+                "Unit": "Hz",
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.mA_active:
         case CommandType.mA_passive:
@@ -1264,43 +1308,67 @@ function parseMeasure(responseFC3, mode) {
             max = getFloat32LEBS(responseFC3, 4);
             meas = getFloat32LEBS(responseFC3, 8);
             return {
-                "Current (mA)": Math.round(meas * 100) / 100,
-                "Min current (mA)": Math.round(min * 100) / 100,
-                "Max current (mA)": Math.round(max * 100) / 100,
-                "Timestamp": new Date()
+                "Description": "Current",
+                "Value": Math.round(meas * 100) / 100,
+                "Unit": "mA",
+                "Minimum": Math.round(min * 100) / 100,
+                "Maximum": Math.round(max * 100) / 100,
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.V:
             min = getFloat32LEBS(responseFC3, 0);
             max = getFloat32LEBS(responseFC3, 4);
             meas = getFloat32LEBS(responseFC3, 8);
             return {
-                "Voltage (V)": Math.round(meas * 100) / 100,
-                "Min voltage (V)": Math.round(min * 100) / 100,
-                "Max voltage (V)": Math.round(max * 100) / 100,
-                "Timestamp": new Date()
+                "Description": "Voltage",
+                "Value": Math.round(meas * 100) / 100,
+                "Unit": "V",
+                "Minimum": Math.round(min * 100) / 100,
+                "Maximum": Math.round(max * 100) / 100,
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.mV:
             min = getFloat32LEBS(responseFC3, 0);
             max = getFloat32LEBS(responseFC3, 4);
             meas = getFloat32LEBS(responseFC3, 8);
             return {
-                "Voltage (mV)": Math.round(meas * 100) / 100,
-                "Min voltage (mV)": Math.round(min * 100) / 100,
-                "Max voltage (mV)": Math.round(max * 100) / 100,
-                "Timestamp": new Date()
+                "Description": "Voltage",
+                "Value": Math.round(meas * 100) / 100,
+                "Unit": "mV",
+                "Minimum": Math.round(min * 100) / 100,
+                "Maximum": Math.round(max * 100) / 100,
+                "Timestamp": new Date().toISOString()
             };
         case CommandType.PulseTrain:
             meas = getUint32LEBS(responseFC3, 0);
             meas2 = getUint32LEBS(responseFC3, 4);
             // Soglia e sensibilità mancanti
-            return { "Pulse ON (#)": meas, "Pulse OFF (#)": meas2, "Timestamp": new Date() };
+            return {
+                "Description": "Pulse ON",
+                "Value": meas,
+                "Unit": "",
+                "SecondaryDescription": "Pulse OFF",
+                "SecondaryValue": meas2,
+                "SecondaryUnit": "",
+                "Timestamp": new Date().toISOString()
+            };
         case CommandType.LoadCell:
             meas = Math.round(getFloat32LEBS(responseFC3, 0) * 1000) / 1000;
             // Kg mancanti
             // Sensibilità, tara, portata mancanti
-            return { "Imbalance (mV/V)": meas, "Timestamp": new Date() };
+            return {
+                "Description": "Imbalance",
+                "Value": meas,
+                "Unit": "mV/V",
+                "Timestamp": new Date().toISOString()
+            };
         default:
-            return { "Unknown": Math.round(meas * 1000) / 1000, "Timestamp": new Date() };
+            return {
+                "Description": "Unknown",
+                "Value": Math.round(meas * 1000) / 1000,
+                "Unit": "?",
+                "Timestamp": new Date().toISOString()
+            };
     }
 }
 
@@ -1406,7 +1474,7 @@ function makeSetpointRequest(mode, setpoint) {
 
             // Byte-swapped little endian
             registers = [dv.getUint16(2, false), dv.getUint16(0, false),
-                        dv.getUint16(6, false), dv.getUint16(4, false)];
+            dv.getUint16(6, false), dv.getUint16(4, false)];
 
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.FrequencyTICK1, registers);
 
@@ -1423,15 +1491,15 @@ function makeSetpointRequest(mode, setpoint) {
             dv.setUint32(8, TEMP - Math.floor(TEMP / 2), false); // TICK2
 
             registers = [dv.getUint16(2, false), dv.getUint16(0, false),
-                        dv.getUint16(6, false), dv.getUint16(4, false),
-                        dv.getUint16(10, false), dv.getUint16(8, false)];
+            dv.getUint16(6, false), dv.getUint16(4, false),
+            dv.getUint16(10, false), dv.getUint16(8, false)];
 
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.PulsesCount, registers);
         case CommandType.SET_UThreshold_F:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ThresholdU_Freq, sp); // U min for freq measurement
         case CommandType.SET_Sensitivity_uS:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.Sensibility_uS_OFF,
-                 [spInt[0], spInt[1], spInt[0], spInt[1]]); // uV for pulse train measurement to ON / OFF
+                [spInt[0], spInt[1], spInt[0], spInt[1]]); // uV for pulse train measurement to ON / OFF
         case CommandType.SET_ColdJunction:
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ColdJunction, sp); // unclear unit
         case CommandType.SET_Ulow:
@@ -1442,6 +1510,10 @@ function makeSetpointRequest(mode, setpoint) {
             setFloat32LEBS(dv, 0, setpoint / MAX_U_GEN); // Must convert V into a % 0..MAX_U_GEN
             var sp2 = [dv.getUint16(0, false), dv.getUint16(2, false)];
             return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GenUhighPerc, sp2); // U high for freq / pulse gen            
+        case CommandType.SET_ShutdownDelay:
+            return makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.PowerOffDelay, setpoint); // delay in sec
+        case CommandType.OFF:
+            return null; // No setpoint
         default:
             throw new Error("Not handled");
     }
@@ -1504,13 +1576,33 @@ function parseSetpointRead(registers, mode) {
     switch (mode) {
         case CommandType.GEN_mA_active:
         case CommandType.GEN_mA_passive:
-            return { "Current (mA)": rounded, "Timestamp": new Date() };
+            return {
+                "Description": "Current",
+                "Value": rounded,
+                "Unit": "mA",
+                "Timestamp": new Date().toISOString()
+            };
         case CommandType.GEN_V:
-            return { "Voltage (V)": rounded, "Timestamp": new Date() };
+            return {
+                "Description": "Voltage",
+                "Value": rounded,
+                "Unit": "V",
+                "Timestamp": new Date().toISOString()
+            };
         case CommandType.GEN_mV:
-            return { "Voltage (mV)": rounded, "Timestamp": new Date() };
+            return {
+                "Description": "Voltage",
+                "Value": rounded,
+                "Unit": "mV",
+                "Timestamp": new Date().toISOString()
+            };
         case CommandType.GEN_LoadCell:
-            return { "Imbalance (mV/V)": rounded, "Timestamp": new Date() };
+            return {
+                "Description": "Imbalance",
+                "Value": rounded,
+                "Unit": "mV/V",
+                "Timestamp": new Date().toISOString()
+            };
         case CommandType.GEN_Frequency:
         case CommandType.GEN_PulseTrain:
             var tick1 = getUint32LEBS(registers, 0);
@@ -1518,10 +1610,18 @@ function parseSetpointRead(registers, mode) {
             var fON = 0.0;
             var fOFF = 0.0;
             if (tick1 != 0)
-                fON = Math.round(1 / (tick1 * 2 / 20000.0), 0);
+                fON = Math.round(1 / (tick1 * 2 / 20000.0) * 10.0) / 10; // Need one decimal place for HZ
             if (tick2 != 0)
-                fOFF = Math.round(1 / (tick2 * 2 / 20000.0), 0);
-            return { "Frequency ON (Hz)": fON, "Frequency OFF (Hz)": fOFF, "Timestamp": new Date() };
+                fOFF = Math.round(1 / (tick2 * 2 / 20000.0) * 10.0) / 10; // Need one decimal place for HZ
+            return {
+                "Description": "Frequency ON",
+                "Value": fON,
+                "Unit": "Hz",
+                "SecondaryDescription": "Frequency OFF",
+                "SecondaryValue": fOFF,
+                "SecondaryUnit": "Hz",
+                "Timestamp": new Date().toISOString()
+            };
         case CommandType.GEN_Cu50_2W:
         case CommandType.GEN_Cu100_2W:
         case CommandType.GEN_Ni100_2W:
@@ -1538,9 +1638,19 @@ function parseSetpointRead(registers, mode) {
         case CommandType.GEN_THERMO_R:
         case CommandType.GEN_THERMO_S:
         case CommandType.GEN_THERMO_T:
-            return { "Temperature (°C)": rounded, "Timestamp": new Date() };
+            return {
+                "Description": "Temperature",
+                "Value": rounded,
+                "Unit": "°C",
+                "Timestamp": new Date().toISOString()
+            };
         default:
-            return { "Value": rounded, "Timestamp": new Date() };
+            return {
+                "Description": "Unknown",
+                "Value": rounded,
+                "Unit": "?",
+                "Timestamp": new Date().toISOString()
+            };
     }
 
 }
@@ -1569,9 +1679,9 @@ async function stateMachine() {
     // Stop request from API
     if (btState.stopRequest) {
         btState.state = State.STOPPING;
-        btState.stopRequest = false;
     }
-
+    
+    log.debug("\State:" + btState.state);
     switch (btState.state) {
         case State.NOT_CONNECTED: // initial state on Start()
             nextAction = btPairDevice;
@@ -1636,12 +1746,20 @@ async function stateMachine() {
 
     if (nextAction != undefined) {
         log.debug("\tExecuting:" + nextAction.name);
-        nextAction();
+        try
+        {
+            await nextAction();
+        }
+        catch(e) 
+        {
+            log.error("Exception in state machine", e);
+        }
     }
     if (btState.state != State.STOPPED) {
         sleep(DELAY_MS).then(() => stateMachine()); // Recheck status in DELAY_MS ms
     }
     else {
+        log.debug("\tTerminating State machine");
         btState.started = false;
     }
 }
@@ -1653,6 +1771,10 @@ async function processCommand() {
     try {
         var command = btState.command;
         var packet, response, startGen;
+        const RESET_POWER_OFF = 6;
+        const SET_POWER_OFF = 7;
+        const CLEAR_AVG_MIN_MAX = 5;
+        const PULSE_CMD = 9;
 
         if (command == null) {
             return;
@@ -1669,15 +1791,28 @@ async function processCommand() {
         await sleep(100);
 
         // Now write the setpoint or setting
-        if (command.isGenerating() || command.isSetting()) {
+        if (isGeneration(command.type) || isSetting(command.type) && command.type != CommandType.OFF) {
             log.debug("\t\tWriting setpoint :" + command.setpoint);
             response = await SendAndResponse(makeSetpointRequest(command.type, command.setpoint));
-            if (!parseFC16checked(response, 0)) {
+            if (response !=null && !parseFC16checked(response, 0)) {
                 throw new Error("Setpoint not correctly written");
+            }
+            switch (command.type) {
+                case CommandType.SET_ShutdownDelay:
+                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [RESET_POWER_OFF]);
+                    response = await SendAndResponse(startGen);
+                    if (!parseFC16checked(response, 1)) {
+                        command.error = true;
+                        command.pending = false;
+                        throw new Error("Failure to set poweroff timer.");
+                    }
+                    break;
+                default:
+                    break;
             }
         }
 
-        if (!command.isSetting())  // IF this is a setting, we're done.
+        if (!isSetting(command.type) && isValid(command.type) && command.type != CommandType.OFF)  // IF this is a setting, we're done.
         {
             // Now write the mode set 
             log.debug("\t\tSetting new mode :" + command.type);
@@ -1709,7 +1844,7 @@ async function processCommand() {
                     await sleep(1000);
                     // Reset the min/max/avg value
                     log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [5]);
+                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [CLEAR_AVG_MIN_MAX]);
                     response = await SendAndResponse(startGen);
                     if (!parseFC16checked(response, 1)) {
                         command.error = true;
@@ -1720,7 +1855,7 @@ async function processCommand() {
                 case CommandType.GEN_PulseTrain:
                     await sleep(1000);
                     log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [9, 2]); // Start with low
+                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [PULSE_CMD, 2]); // Start with low
                     response = await SendAndResponse(startGen);
                     if (!parseFC16checked(response, 2)) {
                         command.error = true;
@@ -1731,7 +1866,7 @@ async function processCommand() {
                 case CommandType.GEN_Frequency:
                     await sleep(1000);
                     log.debug("\t\tResetting statistics");
-                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [9, 1]); // start gen
+                    startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GEN_CMD, [PULSE_CMD, 1]); // start gen
                     response = await SendAndResponse(startGen);
                     if (!parseFC16checked(response, 2)) {
                         command.error = true;
@@ -1740,16 +1875,24 @@ async function processCommand() {
                     }
                     break;
             } // switch
-        } // if (command.isGenerating())
-        
-        // Caller expects a valid property in GetState() once command is executed.
-        await refresh();
+            
+            // Disable auto power off
+            log.debug("\t\tDisabling power off");
+            startGen = makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [RESET_POWER_OFF]);
+            response = await SendAndResponse(startGen);
+
+        } // if (!isSetting(command.type) && isValid(command.type)))
 
         command.error = false;
         command.pending = false;
-
         btState.command = null;
+
+        // Caller expects a valid property in GetState() once command is executed.
+        log.debug("\t\tRefreshing current state");
+        await refresh();
+        
         btState.state = State.IDLE;
+        log.debug("\t\tCompleted command executed");
     }
     catch (err) {
         log.error("** error while executing command: " + err);
@@ -1786,7 +1929,7 @@ async function SendAndResponse(command) {
 
     var endTime = new Date().getTime();
 
-    var answer = btState.response.slice();
+    var answer = btState.response?.slice();
     btState.response = null;
 
     btState.stats["responseTime"] = Math.round((1.0 * btState.stats["responseTime"] * (btState.stats["responses"] % 500) + (endTime - startTime)) / ((btState.stats["responses"] % 500) + 1));
@@ -1900,11 +2043,11 @@ function handleNotifications(event) {
 /**
  * This function will succeed only if called as a consequence of a user-gesture
  * E.g. button click. This is due to BlueTooth API security model.
- * @param {boolean} forceSelection true to force the bluetooth device selection by user, false to use the one starting with MSC
  * */
-async function btPairDevice(forceSelection = true) {
+async function btPairDevice() {
     btState.state = State.CONNECTING;
-
+    var forceSelection = btState.options["forceDeviceSelection"];
+    log.debug("btPairDevice(" + forceSelection + ")");
     try {
         if (typeof (navigator.bluetooth?.getAvailability) == 'function') {
             const availability = await navigator.bluetooth.getAvailability();
@@ -1919,7 +2062,13 @@ async function btPairDevice(forceSelection = true) {
         if (typeof (navigator.bluetooth?.getDevices) == 'function'
             && !forceSelection) {
             const availableDevices = await navigator.bluetooth.getDevices();
-            availableDevices.forEach(function (dev, index) { if (dev.name.startsWith("MSC")) device = dev; });
+            availableDevices.forEach(function (dev, index) 
+            { 
+                log.debug("Found authorized device :" + dev.name);
+                if (dev.name.startsWith("MSC")) 
+                    device = dev; 
+            });
+            log.debug("navigator.bluetooth.getDevices()=" + device);
         }
         // If not, request from user
         if (device == null) {
@@ -1991,7 +2140,7 @@ async function btSubscribe() {
         btState.charRead.addEventListener('characteristicvaluechanged', handleNotifications);
         btState.charRead.startNotifications();
         log.info('> Bluetooth interfaces ready.');
-        btState.stats["last_connect"] = new Date();
+        btState.stats["last_connect"] = new Date().toISOString();
         await sleep(50);
         btState.state = State.METER_INIT;
     }
@@ -2025,11 +2174,13 @@ async function refresh() {
         if (mode != CommandType.NONE_UNKNOWN) {
             btState.meter.mode = mode;
 
-            if (btState.meter.isGenerating())
+            if (btState.meter.isGeneration())
                 await refreshGeneration();
-            else
+            
+            if (btState.meter.isMeasurement())
                 await refreshMeasure();
         }
+        log.debug("\t\tFinished refreshing current state");
         btState.state = State.IDLE;
     }
     catch (err) {
