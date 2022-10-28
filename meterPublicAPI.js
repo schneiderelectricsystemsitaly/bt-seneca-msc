@@ -144,10 +144,14 @@ async function SimpleExecuteJSON(jsonCommand) {
     if (utils.isGeneration(command.type))
     {
         cr.value = btState.lastSetpoint["Value"];
+        cr.unit = btState.lastMeasure["Unit"];
     }
     else if (utils.isMeasurement(command.type))
     {
         cr.value = btState.lastMeasure["Value"];
+        cr.unit = btState.lastMeasure["Unit"];
+        cr.secondary_value = btState.lastMeasure["SecondaryValue"];
+        cr.secondary_unit = btState.lastMeasure["SecondaryUnit"];
     }
     else
     {
