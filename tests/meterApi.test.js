@@ -173,7 +173,7 @@ describe('Basic tests', () => {
         expect(result).toHaveProperty('success');
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('value');
-        
+        expect(result).toHaveProperty('unit');
         expect(result.success).toBeFalsy();
         expect(result.message).not.toBeNull();
     })
@@ -185,7 +185,21 @@ describe('Basic tests', () => {
         expect(result).toHaveProperty('success');
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('value');
-        
+        expect(result).toHaveProperty('unit');
+        expect(result.success).toBeFalsy();
+        expect(result.message).not.toBeNull();
+    })
+
+    test('SimpleExecuteJSON returns the right properties', async () => {
+        var comm = MSC.Command.CreateOneSP(MSC.CommandType.Cu100_2W, 5.0);
+        let result = JSON.parse(await MSC.SimpleExecuteJSON(JSON.stringify(comm)));
+        expect(result).not.toBeNull();
+        expect(result).toHaveProperty('success');
+        expect(result).toHaveProperty('message');
+        expect(result).toHaveProperty('value');
+        expect(result).toHaveProperty('secondary_unit');
+        expect(result).toHaveProperty('secondary_value');
+        expect(result).toHaveProperty('unit');
         expect(result.success).toBeFalsy();
         expect(result.message).not.toBeNull();
     })
