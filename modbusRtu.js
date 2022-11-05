@@ -117,7 +117,7 @@ function parseFC3(response) {
     var actual_crc = view.getUint16(view.byteLength - 2, true);
 
     if (computed_crc != actual_crc) {
-        throw new ModbusError("Wrong CRC", 3);
+        throw new ModbusError("Wrong CRC (expected:" + computed_crc + ",got:" + actual_crc + ")", 3);
     }
 
     var address = view.getUint8(0);
@@ -196,7 +196,7 @@ function parseFC16(response) {
     var actual_crc = view.getUint16(view.byteLength - 2, true);
 
     if (computed_crc != actual_crc) {
-        throw new ModbusError("Wrong CRC", 16);
+        throw new ModbusError("Wrong CRC (expected:" + computed_crc + ",got:" + actual_crc + ")", 16);
     }
 
     var address = view.getUint16(2, false);
@@ -263,4 +263,4 @@ function setUint32LEBS(dataView, offset, value) {
     dataView.setInt16(offset + 2, dv.getInt16(0, false), false);
 }
 
-module.exports = { makeFC3, getFloat32LEBS, makeFC16, setFloat32LEBS, setUint32LEBS, parseFC3, parseFC16, parseFC16checked, ModbusError, SENECA_MB_SLAVE_ID, getUint32LEBS }
+module.exports = { makeFC3, getFloat32LEBS, makeFC16, setFloat32LEBS, setUint32LEBS, parseFC3, parseFC16, parseFC16checked, ModbusError, SENECA_MB_SLAVE_ID, getUint32LEBS, crc16}

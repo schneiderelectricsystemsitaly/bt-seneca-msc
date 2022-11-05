@@ -97,4 +97,10 @@ const State = {
     METER_INITIALIZING: 'Reading meter state...'
 };
 
-module.exports = {State, CommandType }
+const ResultCode = {
+    FAILED_NO_RETRY: 1,
+    FAILED_SHOULD_RETRY: 2,
+    SUCCESS: 0
+}
+
+module.exports = {State, CommandType, ResultCode }

@@ -57,4 +57,22 @@ function isValid(ctype) {
         .join(' ');
 }
 
-module.exports = { sleep, waitFor, waitForTimeout, isGeneration, isMeasurement, isSetting, isValid, Parse, buf2hex };
+function hex2buf (input) {
+    if (typeof input !== 'string') {
+        throw new TypeError('Expected input to be a string')
+    }
+    var hexstr = input.replace(/\s+/g, '');
+    if ((hexstr.length % 2) !== 0) {
+        throw new RangeError('Expected string to be an even number of characters')
+    }
+
+    const view = new Uint8Array(hexstr.length / 2)
+
+    for (let i = 0; i < hexstr.length; i += 2) {
+        view[i / 2] = parseInt(hexstr.substring(i, i + 2), 16)
+    }
+
+    return view.buffer
+}
+
+module.exports = { sleep, waitFor, waitForTimeout, isGeneration, isMeasurement, isSetting, isValid, Parse, buf2hex, hex2buf };

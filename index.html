@@ -86,6 +86,12 @@
                 </div>
             </div>
         </div>
+        <div class="row">
+            <div class="col">
+                <input type="button" id="jsonTraces" value="Test modbus traces"  class="btn btn-info">
+                <div id="jsonTestTraces"></div>
+            </div>
+        </div>
     </div>
     <h2>GetState()</h2>
     <div class="container">
@@ -155,6 +161,10 @@
     </div>
     <script>
         // Event listeners
+        $("#jsonTraces").click( async () => {
+            var trace = MSC.GetJsonTraces();
+            $("#jsonTestTraces").text(trace);
+        })
         $("#startBt").click(async () => {
             $("#resultPair").text("Pending...");
             var res = await MSC.Pair(false);

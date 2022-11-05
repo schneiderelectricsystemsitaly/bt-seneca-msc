@@ -14,6 +14,7 @@ var constants = require('./constants');
 var bluetooth = require('./bluetooth');
 var utils = require('./utils');
 var log = require('loglevel');
+var meterApi = require('./meterApi');
 
 var btState = APIState.btState;
 var State = constants.State;
@@ -79,12 +80,16 @@ async function GetStateJSON() {
  */
 async function ExecuteJSON(jsonCommand) {
     let command = JSON.parse(jsonCommand);
-    return JSON.stringify(await Execute(command));
+    // deserialized object has lost its methods, let's recreate a complete one.
+    let command2 =meterApi.Command.CreateTwoSP(command.type, command.setpoint, command.setpoint2);
+    return JSON.stringify(await Execute(command2));
 }
 
 async function SimpleExecuteJSON(jsonCommand) {
     let command = JSON.parse(jsonCommand);
-    return JSON.stringify(await SimpleExecute(command));
+    // deserialized object has lost its methods, let's recreate a complete one.
+    let command2 = meterApi.Command.CreateTwoSP(command.type, command.setpoint, command.setpoint2);
+    return JSON.stringify(await SimpleExecute(command2));
 }
 
 /**
@@ -144,7 +149,7 @@ async function SimpleExecuteJSON(jsonCommand) {
     if (utils.isGeneration(command.type))
     {
         cr.value = btState.lastSetpoint["Value"];
-        cr.unit = btState.lastMeasure["Unit"];
+        cr.unit = btState.lastSetpoint["Unit"];
     }
     else if (utils.isMeasurement(command.type))
     {
@@ -178,9 +183,9 @@ async function Execute(command) {
     command.pending = true;
 
     var cpt = 0;
-    while (btState.command != null && btState.command.pending && cpt < 30) {
+    while (btState.command != null && btState.command.pending && cpt < 300) {
         log.debug("Waiting for current command to complete...");
-        await utils.sleep(1000);
+        await utils.sleep(100);
         cpt++;
     }
     

@@ -1,16 +1,24 @@
+'use strict';
 
-/************************************************** BLUETOOTH HANDLING FUNCTIONS *****************************************************/
+/**
+ *  Bluetooth handling module, including main state machine loop.
+ *  This module interacts with browser for bluetooth comunications and pairing, and with SenecaMSC object.
+ */
+
 var APIState = require('./classes/APIState');
 var log = require('loglevel');
 var constants = require('./constants');
 var utils = require('./utils');
-var seneca = require('./senecaModbus');
+var senecaModule = require('./classes/SenecaMSC');
 var modbus = require('./modbusRtu');
+var testData = require('./modbusTestData');
 
 var btState = APIState.btState;
 var State = constants.State;
 var CommandType = constants.CommandType;
-
+var ResultCode = constants.ResultCode;
+var simulation = false;
+var logging = false;
 /*
  * Bluetooth constants
  */
@@ -20,13 +28,73 @@ const BlueToothMSC = {
     ModbusRequestUuid: '0003cdd2-0000-1000-8000-00805f9b0131'    // modbus RTU requests
 };
 
+
+/**
+ * Send the message using Bluetooth and wait for an answer
+ * @param {ArrayBuffer} command modbus RTU packet to send
+ * @returns {ArrayBuffer} the modbus RTU answer
+ */
+ async function SendAndResponse(command) {
+
+    if (command == null)
+        return null;
+
+    log.debug(">> " + utils.buf2hex(command));
+
+    btState.response = null;
+    btState.stats["requests"]++;
+
+    var startTime = new Date().getTime();
+    if (simulation) {
+        btState.response = fakeResponse(command);
+        await utils.sleep(5);
+    }
+    else {
+        await btState.charWrite.writeValueWithoutResponse(command);
+        while (btState.state == State.METER_INITIALIZING ||
+            btState.state == State.BUSY) {
+            if (btState.response != null) break;
+            await new Promise(resolve => setTimeout(resolve, 35));
+        }    
+    }
+    
+    var endTime = new Date().getTime();
+
+    var answer = btState.response?.slice();
+    btState.response = null;
+    
+    // Log the packets
+    if (logging) {
+        var packet = {'request': utils.buf2hex(command), 'answer': utils.buf2hex(answer)};
+        var packets = window.localStorage.getItem("ModbusRTUtrace");
+        if (packets == null)
+        {
+            packets = []; // initialize array
+        }
+        else
+        {
+            packets = JSON.parse(packets); // Restore the json persisted object
+        }
+        packets.push(packet); // Add the new object
+        window.localStorage.setItem("ModbusRTUtrace", JSON.stringify(packets));
+    }
+
+    btState.stats["responseTime"] = Math.round((1.0 * btState.stats["responseTime"] * (btState.stats["responses"] % 500) + (endTime - startTime)) / ((btState.stats["responses"] % 500) + 1));
+    btState.stats["lastResponseTime"] = Math.round(endTime - startTime) + " ms";
+    btState.stats["responses"]++;
+
+    return answer;
+}
+
+let senecaMSC = new senecaModule.SenecaMSC(SendAndResponse);
+
 /**
  * Main loop of the meter handler.
  * */
 async function stateMachine() {
     var nextAction;
-    const DELAY_MS = 750;
-    const TIMEOUT_MS = 30000;
+    var DELAY_MS = (simulation?20:750); // Update the status every X ms.
+    var TIMEOUT_MS = (simulation?1000:30000); // Give up some operations after X ms.
     btState.started = true;
 
     log.debug("Current state:" + btState.state);
@@ -46,13 +114,21 @@ async function stateMachine() {
     log.debug("\State:" + btState.state);
     switch (btState.state) {
         case State.NOT_CONNECTED: // initial state on Start()
-            nextAction = btPairDevice;
+            if (simulation){
+                nextAction = fakePairDevice;
+            } else {
+                nextAction = btPairDevice;
+            }
             break;
         case State.CONNECTING: // waiting for connection to complete
             nextAction = undefined;
             break;
         case State.DEVICE_PAIRED: // connection complete, acquire meter state
-            nextAction = btSubscribe;
+            if (simulation){
+                nextAction = fakeSubscribe;
+            } else {
+                nextAction = btSubscribe;
+            }
             break;
         case State.SUBSCRIBING: // waiting for Bluetooth interfaces
             nextAction = undefined;
@@ -70,7 +146,11 @@ async function stateMachine() {
             if (btState.state_cpt > (TIMEOUT_MS / DELAY_MS)) {
                 log.warn("Timeout in METER_INITIALIZING");
                 // Timeout, try to resubscribe
-                nextAction = btSubscribe;
+                if (simulation){
+                    nextAction = fakeSubscribe;
+                } else {
+                    nextAction = btSubscribe;
+                }
                 btState.state_cpt = 0;
             }
             nextAction = undefined;
@@ -89,7 +169,11 @@ async function stateMachine() {
             if (btState.state_cpt > (TIMEOUT_MS / DELAY_MS)) {
                 log.warn("Timeout in BUSY");
                 // Timeout, try to resubscribe
-                nextAction = btSubscribe;
+                if (simulation){
+                    nextAction = fakeSubscribe;
+                } else {
+                    nextAction = btSubscribe;
+                }
                 btState.state_cpt = 0;
             }
             nextAction = undefined;
@@ -130,11 +214,8 @@ async function stateMachine() {
 async function processCommand() {
     try {
         var command = btState.command;
+        var result = ResultCode.SUCCESS;
         var packet, response, startGen;
-        const RESET_POWER_OFF = 6;
-        const SET_POWER_OFF = 7;
-        const CLEAR_AVG_MIN_MAX = 5;
-        const PULSE_CMD = 9;
 
         if (command == null) {
             return;
@@ -142,107 +223,31 @@ async function processCommand() {
         btState.state = State.BUSY;
         btState.stats["commands"]++;
 
-        log.info('\t\tExecuting command ' + command);
+        log.info('\t\tExecuting command :' + command);
 
         // First set NONE because we don't want to write new setpoints with active generation
-        log.debug("\t\tSetting meter to OFF");
-        packet = seneca.makeModeRequest(CommandType.OFF);
-        await SendAndResponse(packet);
-        await utils.sleep(100);
-
+        result = await senecaMSC.switchOff();
+        if (result != ResultCode.SUCCESS) {
+            throw new Error("Cannot switch meter off before command write!");
+        }
+        
         // Now write the setpoint or setting
         if (utils.isGeneration(command.type) || utils.isSetting(command.type) && command.type != CommandType.OFF) {
-            log.debug("\t\tWriting setpoint :" + command.setpoint);
-            response = await SendAndResponse(seneca.makeSetpointRequest(command.type, command.setpoint, command.setpoint2));
-            if (response != null && !modbus.parseFC16checked(response, 0)) {
-                throw new Error("Setpoint not correctly written");
-            }
-            switch (command.type) {
-                case CommandType.SET_ShutdownDelay:
-                    startGen = modbus.makeFC16(modbus.SENECA_MB_SLAVE_ID, seneca.MSCRegisters.CMD, [RESET_POWER_OFF]);
-                    response = await SendAndResponse(startGen);
-                    if (!modbus.parseFC16checked(response, 1)) {
-                        command.error = true;
-                        command.pending = false;
-                        throw new Error("Failure to set poweroff timer.");
-                    }
-                    break;
-                default:
-                    break;
+            result = await senecaMSC.writeSetpoints(command.type, command.setpoint, command.setpoint2);
+            if (result != ResultCode.SUCCESS) {
+                throw new Error("Failure to write setpoints!");
             }
         }
 
         if (!utils.isSetting(command.type) && 
             utils.isValid(command.type) && command.type != CommandType.OFF)  // IF this is a setting, we're done.
         {
-            // Now write the mode set 
-            log.debug("\t\tSetting new mode :" + command.type);
-            packet = seneca.makeModeRequest(command.type);
-            if (packet == null) {
-                command.error = true;
-                command.pending = false;
-                log.error("Could not generate modbus packet for command", command);
-                return;
+            // Now write the mode set
+            result = await senecaMSC.changeMode(command.type);
+            if (result != ResultCode.SUCCESS) {
+                throw new Error("Failure to change meter mode!");
             }
-
-            response = await SendAndResponse(packet);
-            command.request = packet;
-            command.answer = response;
-
-            if (!modbus.parseFC16checked(response, 0)) {
-                command.error = true;
-                command.pending = false;
-                throw new Error("Not all registers were written");
-            }
-
-            // Some commands require START command to be given
-            switch (command.type) {
-                case CommandType.V:
-                case CommandType.mV:
-                case CommandType.mA_active:
-                case CommandType.mA_passive:
-                case CommandType.PulseTrain:
-                    await utils.sleep(1000);
-                    // Reset the min/max/avg value
-                    log.debug("\t\tResetting statistics");
-                    startGen = modbus.makeFC16(modbus.SENECA_MB_SLAVE_ID, seneca.MSCRegisters.CMD, [CLEAR_AVG_MIN_MAX]);
-                    response = await SendAndResponse(startGen);
-                    if (!modbus.parseFC16checked(response, 1)) {
-                        command.error = true;
-                        command.pending = false;
-                        throw new Error("Failure to reset stats.");
-                    }
-                    break;
-                case CommandType.GEN_PulseTrain:
-                    await utils.sleep(1000);
-                    log.debug("\t\tResetting statistics");
-                    startGen = modbus.makeFC16(modbus.SENECA_MB_SLAVE_ID, seneca.MSCRegisters.GEN_CMD, [PULSE_CMD, 2]); // Start with low
-                    response = await SendAndResponse(startGen);
-                    if (!modbus.parseFC16checked(response, 2)) {
-                        command.error = true;
-                        command.pending = false;
-                        throw new Error("Not all registers were written");
-                    }
-                    break;
-                case CommandType.GEN_Frequency:
-                    await utils.sleep(1000);
-                    log.debug("\t\tResetting statistics");
-                    startGen = modbus.makeFC16(modbus.SENECA_MB_SLAVE_ID, seneca.MSCRegisters.GEN_CMD, [PULSE_CMD, 1]); // start gen
-                    response = await SendAndResponse(startGen);
-                    if (!modbus.parseFC16checked(response, 2)) {
-                        command.error = true;
-                        command.pending = false;
-                        throw new Error("Not all registers were written");
-                    }
-                    break;
-            } // switch
-
-            // Disable auto power off
-            log.debug("\t\tDisabling power off");
-            startGen = modbus.makeFC16(seneca.SENECA_MB_SLAVE_ID, seneca.MSCRegisters.CMD, [RESET_POWER_OFF]);
-            response = await SendAndResponse(startGen);
-
-        } // if (!isSetting(command.type) && isValid(command.type)))
+        }
 
         // Caller expects a valid property in GetState() once command is executed.
         log.debug("\t\tRefreshing current state");
@@ -265,59 +270,83 @@ async function processCommand() {
     }
 }
 
+function getExpectedStateHex() {
+// Simulate current mode answer according to last command.
+    var stateHex = (CommandType.OFF).toString(16);
+    if (btState.command?.type != null)
+    {
+        stateHex = (btState.command.type).toString(16);
+    }
+    // Add trailing 0
+    while(stateHex.length < 2)
+        stateHex = "0" + stateHex;
+    return stateHex;
+}
 /**
- * Send the message using Bluetooth and wait for an answer
- * @param {ArrayBuffer} command modbus RTU packet to send
- * @returns {ArrayBuffer} the modbus RTU answer
+ * Used to simulate RTU answers
+ * @param {ArrayBuffer} command real request
+ * @returns {ArrayBuffer} fake answer
  */
-async function SendAndResponse(command) {
+function fakeResponse(command) {
+    var commandHex = utils.buf2hex(command);
+    var forgedAnswers = {
+                     '19 03 00 64 00 01 c6 0d' : '19 03 02 00' + getExpectedStateHex() +' $$$$', // Current state
+                     'default 03' : '19 03 06 0001 0001 0001 $$$$', // default answer for FC3
+                     'default 10' : '19 10 00 d4 00 02 0001 0001 $$$$'}; // default answer for FC10
 
-    if (command == null)
-        return null;
+    // Start with the default answer
+    var responseHex = forgedAnswers['default ' + commandHex.split(' ')[1]];
 
-    log.debug(">> " + utils.buf2hex(command));
-
-    btState.response = null;
-    btState.stats["requests"]++;
-
-    var startTime = new Date().getTime();
-    await btState.charWrite.writeValueWithoutResponse(command);
-    while (btState.state == State.METER_INITIALIZING ||
-        btState.state == State.BUSY) {
-        if (btState.response != null) break;
-        await new Promise(resolve => setTimeout(resolve, 35));
+    // Do we have a forged answer?
+    if (forgedAnswers[commandHex] != undefined) {
+        responseHex = forgedAnswers[commandHex];
+    }
+    else
+    {
+        // Look into registered traces
+        found = [];
+        for(const trace of testData.testTraces) {
+            if (trace["request"] === commandHex) {
+                found.push(trace["answer"]);
+            }
+        }
+        if (found.length > 0) {
+            // Select a random answer from the registered trace
+            responseHex = found[Math.floor((Math.random()*found.length))];
+        }
+        else
+        {
+            console.info(commandHex + " not found in test traces");
+        }
+    }
+    
+    // Compute CRC if needed
+    if (responseHex.includes("$$$$")) {
+        responseHex = responseHex.replace('$$$$','');
+        var crc = modbus.crc16(new Uint8Array(utils.hex2buf(responseHex))).toString(16);
+        while(crc.length < 4)
+            crc = "0" + crc;
+        responseHex = responseHex + crc.substring(2,4) + crc.substring(0,2);
     }
 
-    var endTime = new Date().getTime();
-
-    var answer = btState.response?.slice();
-    btState.response = null;
-
-    btState.stats["responseTime"] = Math.round((1.0 * btState.stats["responseTime"] * (btState.stats["responses"] % 500) + (endTime - startTime)) / ((btState.stats["responses"] % 500) + 1));
-    btState.stats["lastResponseTime"] = Math.round(endTime - startTime) + " ms";
-    btState.stats["responses"]++;
-
-    return answer;
+    log.debug("<< " + responseHex);
+    return utils.hex2buf(responseHex);
 }
 
 /**
  * Acquire the current mode and serial number of the device.
  * */
 async function meterInit() {
-    var response;
-
     try {
         btState.state = State.METER_INITIALIZING;
-        response = await SendAndResponse(seneca.makeSerialNumber());
-        btState.meter.serial = seneca.parseSerialNumber(response);
+        btState.meter.serial = await senecaMSC.getSerialNumber();
         log.info('\t\tSerial number:' + btState.meter.serial);
 
-        response = await SendAndResponse(seneca.makeCurrentMode());
-        btState.meter.mode = seneca.parseCurrentMode(response, CommandType.NONE_UNKNOWN);
+        btState.meter.mode = await senecaMSC.getCurrentMode();
         log.debug('\t\tCurrent mode:' + btState.meter.mode);
 
-        response = await SendAndResponse(seneca.makeBatteryLevel());
-        btState.meter.battery = Math.round(seneca.parseBattery(response) * 100) / 100;
+        btState.meter.battery = await senecaMSC.getBatteryVoltage();
+        log.debug('\t\tBattery (V):' + btState.meter.battery);
 
         btState.state = State.IDLE;
     }
@@ -459,6 +488,27 @@ async function btPairDevice() {
     }
 }
 
+async function fakePairDevice() {
+    btState.state = State.CONNECTING;
+    var forceSelection = btState.options["forceDeviceSelection"];
+    log.debug("fakePairDevice(" + forceSelection + ")");
+    try {
+        var device = { name : "FakeBTDevice", gatt: {connected:true}};
+        btState.btDevice = device;
+        btState.state = State.DEVICE_PAIRED;
+        log.info("Bluetooth device " + device.name + " connected.");
+        await utils.sleep(50);
+    }
+    catch (err) {
+        log.warn("** error while connecting: " + err.message);
+        btState.btService = null;
+        btState.charRead = null;
+        btState.charWrite = null;
+        btState.state = State.ERROR;
+        btState.stats["exceptions"]++;
+    }
+}
+
 /**
  * Once the device is available, initialize the service and the 2 characteristics needed.
  * */
@@ -521,6 +571,45 @@ async function btSubscribe() {
     }
 }
 
+async function fakeSubscribe() {
+    try {
+        btState.state = State.SUBSCRIBING;
+        btState.stats["subcribes"]++;
+        let device = btState.btDevice;
+        let server = null;
+
+        if (!device?.gatt?.connected) {
+            log.debug(`Connecting to GATT Server on ${device.name}...`);
+            device['gatt']['connected']=true;
+            log.debug('> Found GATT server');
+        }
+        else {
+            log.debug('GATT already connected');
+            server = device.gatt;
+        }
+
+        btState.btService = {};
+        log.debug('> Found Serial service');
+        btState.charWrite = {};
+        log.debug('> Found write characteristic');
+        btState.charRead = {};
+        log.debug('> Found read characteristic');
+        btState.response = null;
+        log.info('> Bluetooth interfaces ready.');
+        btState.stats["last_connect"] = new Date().toISOString();
+        await utils.sleep(10);
+        btState.state = State.METER_INIT;
+    }
+    catch (err) {
+        log.warn("** error while subscribing: " + err.message);
+        btState.charRead = null;
+        btState.charWrite = null;
+        btState.state = State.DEVICE_PAIRED;
+        btState.stats["exceptions"]++;
+    }
+}
+
+
 /**
  * When idle, this function is called
  * */
@@ -528,17 +617,22 @@ async function refresh() {
     btState.state = State.BUSY;
     try {
         // Check the mode first
-        var response = await SendAndResponse(seneca.makeCurrentMode());
-        var mode = seneca.parseCurrentMode(response, btState.meter.mode);
+        var mode = await senecaMSC.getCurrentMode();
 
         if (mode != CommandType.NONE_UNKNOWN) {
             btState.meter.mode = mode;
 
             if (btState.meter.isGeneration())
-                await refreshGeneration();
+            {
+                var setpoints = await senecaMSC.getSetpoints(btState.meter.mode);
+                btState.lastSetpoint = setpoints;
+            }
 
             if (btState.meter.isMeasurement())
-                await refreshMeasure();
+            {
+                var meas = await senecaMSC.getMeasures(btState.meter.mode);
+                btState.lastMeasure = meas;
+            }
         }
         log.debug("\t\tFinished refreshing current state");
         btState.state = State.IDLE;
@@ -552,35 +646,8 @@ async function refresh() {
     }
 }
 
-/**
- * Read the last measure and update btState.lastMeasure property
- * */
-async function refreshMeasure() {
-    // Read quality
-    var response = await SendAndResponse(seneca.makeQualityBitRequest());
-    var valid = seneca.isQualityValid(response);
-
-    // Read measure
-    response = await SendAndResponse(seneca.makeMeasureRequest(btState.meter.mode));
-    var meas = seneca.parseMeasure(response, btState.meter.mode);
-    meas["error"] = !valid;
-
-    btState.lastMeasure = meas;
+function SetSimulation(value) {
+    simulation = value;
 }
 
-/**
- * Gets the current values for the generated U,I from the device
- * */
-async function refreshGeneration() {
-    var response = await SendAndResponse(seneca.makeSetpointRead(btState.meter.mode));
-    if (response != null) {
-        var results = seneca.parseSetpointRead(response, btState.meter.mode);
-
-        response = await SendAndResponse(seneca.makeGenStatusRead());
-        results["error"] = !seneca.parseGenStatus(response, btState.meter.mode);
-
-        btState.lastSetpoint = results;
-    }
-}
-
-module.exports = {stateMachine};
+module.exports = {stateMachine, SendAndResponse, SetSimulation};

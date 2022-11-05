@@ -5,6 +5,7 @@ const constants = require('./constants');
 const APIState = require('./classes/APIState');
 const Command = require('./classes/Command');
 const PublicAPI =require('./meterPublicAPI');
+const TestData =require('./modbusTestData');
 
 log.setLevel(log.levels.ERROR, true);
 
@@ -21,4 +22,5 @@ exports.log = log;
 exports.GetStateJSON = PublicAPI.GetStateJSON;
 exports.ExecuteJSON = PublicAPI.ExecuteJSON;
 exports.SimpleExecuteJSON = PublicAPI.SimpleExecuteJSON;
+exports.GetJsonTraces = TestData.GetJsonTraces;
 
