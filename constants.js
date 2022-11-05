@@ -1,7 +1,7 @@
 /**
  * Command type, aka mode value to be written into MSC current state register
  * */
- const CommandType = {
+const CommandType = {
     NONE_UNKNOWN: 0, /*** MEASURING FEATURES AFTER THIS POINT *******/
     mA_passive: 1,
     mA_active: 2,
@@ -103,4 +103,4 @@ const ResultCode = {
     SUCCESS: 0
 }
 
-module.exports = {State, CommandType, ResultCode }
+module.exports = { State, CommandType, ResultCode }

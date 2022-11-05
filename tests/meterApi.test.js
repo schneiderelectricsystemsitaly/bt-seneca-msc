@@ -16,7 +16,7 @@ describe('Basic API tests, without simulation', () => {
         expect(MSC.GetStateJSON).not.toBeNull();
         expect(MSC.SimpleExecuteJSON).not.toBeNull();
     })
-    
+
     test('API exports exists', () => {
         expect(MSC.Command).not.toBeNull();
         expect(MSC.CommandType).not.toBeNull();
@@ -67,7 +67,7 @@ describe('Basic API tests, without simulation', () => {
         expect(data.ready).toBeFalsy();
         expect(data.initializing).toBeFalsy();
     })
-        
+
     test('Pair fails (not in browser)', async () => {
         const result = await MSC.Pair(false);
         // Will fail without navigator object
@@ -87,7 +87,7 @@ describe('Basic API tests, without simulation', () => {
         expect(data2.ready).toBeFalsy();
         expect(data2.initializing).toBeFalsy();
     })
-    
+
     test('Measurement execution fails', async () => {
         const command = MSC.Command.CreateNoSP(MSC.CommandType.V);
         const result = await MSC.Execute(command);
@@ -97,26 +97,24 @@ describe('Basic API tests, without simulation', () => {
         // Will stay pending since the state machine is not running
         expect(result.pending).toBeTruthy();
     })
-    
+
     test('Generation execution fails', async () => {
         const command = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 1.23);
         expect(command.setpoint).toBe(1.23);
         expect(command.setpoint2).toBe(null);
-        try
-        {
+        try {
             const result = await MSC.Execute(command);
             expect(result).not.toBeNull();
             // Will stay pending since the state machine is not running
             expect(result.pending).toBeTruthy();
         }
-        catch(e)
-        {
-          // Will throw without Pair   
+        catch (e) {
+            // Will throw without Pair   
         }
-    })   
+    })
 
     test('Command.getDefaultSetpoint and Command properties', async () => {
-        for(var ctype in CommandType) {
+        for (var ctype in CommandType) {
             const command = MSC.Command.CreateNoSP(CommandType[ctype]);
             const info = command.defaultSetpoint();
             expect(info).not.toBeNull();
@@ -163,9 +161,9 @@ describe('Basic API tests, without simulation', () => {
         expect(result.pending).toBeTruthy();
         expect(result.setpoint).toBe(5);
         expect(result.setpoint2).toBe(10);
-        
+
     })
-    
+
     test('SimpleExecute returns the right properties', async () => {
         var comm = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 5.0);
         let result = await MSC.SimpleExecute(comm);
@@ -203,7 +201,7 @@ describe('Basic API tests, without simulation', () => {
         expect(result.success).toBeFalsy();
         expect(result.message).not.toBeNull();
     })
-    
+
     test('MeterState tests', async () => {
         var state = new MeterState();
         state.mode = MSC.CommandType.Cu50_2W;

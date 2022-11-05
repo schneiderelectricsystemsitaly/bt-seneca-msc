@@ -4,8 +4,8 @@ const log = require("loglevel");
 const constants = require('./constants');
 const APIState = require('./classes/APIState');
 const Command = require('./classes/Command');
-const PublicAPI =require('./meterPublicAPI');
-const TestData =require('./modbusTestData');
+const PublicAPI = require('./meterPublicAPI');
+const TestData = require('./modbusTestData');
 
 log.setLevel(log.levels.ERROR, true);
 
