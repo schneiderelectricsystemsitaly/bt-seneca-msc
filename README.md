@@ -84,18 +84,20 @@ libman install bt-seneca-msc --provider jsdelivr
 
 ## External API
 
-There are 4 operations available:
+There are 5 operations available:
 
 ```js
 await MSC.Pair(true/false); // bool - Pair to bluetooth (if True force user pickup)
 await MSC.Stop(); // bool - Disconnect the bluetooth and stops the polling
-await MSC.Execute(MSC.Command); // Execute command. If the device is not paired, an attempt will be made. Command is returned with updated properties.
-await MSC.GetState(); // array - Get the current state
+await MSC.Execute(MSC.Command object); // Execute command. If the device is not paired, an attempt will be made. Command is returned with updated properties.
+await MSC.GetState(); // Returns an array with the current state
+await MSC.SimpleExecute(MSC.Command object); // Execute the command and results the value
 ```
 
 * JSON versions are available for ASPNET.core interop
 
 ```js
+await MSC.SimpleExecuteJSON(jsonCommand); // Expects a json string (Command) and returns a json string (simple result)
 await MSC.ExecuteJSON(jsonCommand); // Expects a json string (Command) and returns a json string (update Command object)
 await MSC.GetStateJSON(); // returns a json string with the same properties as GetState()
 ```
@@ -126,8 +128,10 @@ var mstate = await MSC.GetState();
 mstate.ready          // The meter is ready to execute commands
 mstate.initializing   // The meter is initializing bluetooth
 mstate.status         // State machine internal status (Ready,Busy,Pairing,...)
-mstate.lastSetpoint   // Last executed generation function. Element at position 0 is the setpoint.
-mstate.lastMeasure    // Last measurement. Element at position 0 is the main measurement.
+
+mstate.lastSetpoint   // Last executed generation data. An array.
+mstate.lastMeasure    // Last measurement. An array.
+
 mstate.deviceName     // Name of the bluetooth device paired
 mstate.deviceSerial   // Serial number of the MSC device
 mstate.deviceMode     // Current mode of the MSC device (see CommandType values)
@@ -158,24 +162,53 @@ The state property returned by GetState() can have the following values (see MSC
 The MSC device supports readings and generations. Each function corresponds to a CommandType enum value.
 Generations require one or more setpoint, depending on the specific function.
 
-In all cases, the workflow is the same.
-
-* Command class
+* Command class is a required parameter to send a command to the meter
 
 ```js
-var comm = new MSC.Command(CommandType.<function>, null|setpoint|[setpoint1, setpoint2])
+// Use the static methods CreateNo/One/TwoSP to initialize a command object
+var comm_meas = MSC.Command.CreateNoSP(<CommandType enum value>)
+var comm_gen = MSC.Command.CreateOneSP(<CommandType enum value>, setpoint)
+var comm_cgen = MSC.Command.CreateTwoSP(<CommandType enum value>, set1, set2)
+// The following properties are available
 comm.error // true if the Execute method has failed 
 comm.type  // type of the command
-comm.setpoint  // copy of setpoints
+comm.setpoint  // copy of setpoint 1 or null
+comm.setpoint2  // copy of setpoint 2 or null
 comm.defaultSetpoint() // see below
 ```
+
+* In all cases, will try to re-execute the command if communication breaks during execution.
+* The API will put the device in OFF state before writing setpoints (for safety), then apply the new mode settings after a slight delay.
+* For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter 1s after mode change.
+
+
+#### Sending commands to the meter (simple version)
+
+SimpleExecute will send the command and update the state. 
+* It will fail if a command is already pending, the meter is not paired, or the command execution fails for whatever reason. 
+* A message property is available for diagnostics.
+* It will not attempt to pair the device if not already paired and fail fast.
+
+```js
+// Use the static methods CreateNo/One/TwoSP to initialize a command object
+var comm_meas = MSC.Command.CreateNoSP(CommandType.V);
+var result = await MSC.SimpleExecute(command);
+if (!result.error)
+{
+    console.log("The command was executed and the returned value is " + result.value);
+}
+```
+
+#### Sending commands to the meter (complex version)
+
+Execute method will wait for the previous comand to complete, queue the new command, and return an updated Command object. You will need to call GetState to have the results of the command.
 
 * Read example
 
 ```js
 var state = await MSC.GetState();
 if (state.ready) { // Check that the meter is ready
-    var command = new MSC.Command(MSC.CommandType.mV); // Read mV function
+    var command = MSC.Command.CreateNoSP(MSC.CommandType.mV); // Read mV function
     var result = await MSC.Execute(command);
     if (result.error) { // Check the error property of returned Command
         // Something happened with command execution (device off, comm error...)
@@ -203,7 +236,7 @@ else {
 ```js
 var state = await MSC.GetState();
 if (state.ready) {
-    var command = new MSC.Command(MSC.CommandType.GEN_V, 5.2); // Generate 5.2 V
+    var command = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 5.2); // Generate 5.2 V
     var result = await MSC.Execute(command);
     if (result.error) { // Check the error property of returned Command
         // Something happened with command execution (device off, comm error...)
@@ -230,17 +263,17 @@ else {
 ```js
 // Assuming meter.ready
 
-var command1 = new MSC.Command(MSC.CommandType.SET_Ulow, 0.0); 
+var command1 = MSC.Command.CreateOneSP(MSC.CommandType.SET_Ulow, 0.0); 
 var result1 = await MSC.Execute(command1);
 if (result1.error) { // Check the error property of returned Command
     // Something happened with command execution (device off, comm error...)
 }
-var command2 = new MSC.Command(MSC.CommandType.SET_Uhigh, 5.0); 
+var command2 = MSC.Command.CreateOneSP(MSC.CommandType.SET_Uhigh, 5.0); 
 var result2 = await MSC.Execute(command2);
 if (result2.error) { // Check the error property of returned Command
     // Something happened with command execution (device off, comm error...)
 }
-var command3 = new MSC.Command(MSC.CommandType.GEN_PulseTrain, [100, 1000/50]]); 
+var command3 = MSC.Command.CreateTwoSP(MSC.CommandType.GEN_PulseTrain, 100, 1000/50); 
 var result3 = await MSC.Execute(command3);
 if (result3.error) { // Check the error property of returned Command
     // Something happened with command execution (device off, comm error...)
@@ -248,12 +281,8 @@ if (result3.error) { // Check the error property of returned Command
     // MSC is now generating the pulses
 }
 ```
-
-* If another command is pending execution, Execute() will wait until completion of the previous command.
+* After a command execution the state is up-to-date (garantee)
 * If the state machine is stopped, an attempt will be made to start the machine. This may require to Pair the device and it will fail if Execute is not called from a user-gesture handling function in the browser.
-* API will try to re-execute the command if communication breaks during execution (see internal states above). 
-* The API will put the device in OFF state before writing setpoints (for safety), then apply the new mode settings after a slight delay.
-* For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter 1s after mode change.
 * To get the expected setpoints for a specific command type, use Command.defaultSetpoint(). This is used in the demo page in order to present to the user the right input boxes with meaningful descriptions.
 
 ```js
@@ -291,233 +320,4 @@ npm test
 ```bash
 npm run dev
 npm run dist 
-```
-
-## C# bindings
-
-* The following classes can be json-serialized/deserialized with their equivalent JS versions.
-
-```C#
-    
-/// <summary>
-/// Statistics returned by GetState()
-/// </summary>
-public class MSCStats
-{
-    public int requests = 0;
-    public int responses = 0;
-    public int modbus_errors = 0;
-    [JsonProperty("GATT disconnects")]
-    public int GATT_disconnects = 0;
-    public int exceptions = 0;
-    public int subcribes = 0;
-    public int commands = 0;
-    public float responseTime = 0;
-    public string lastResponseTime = "";
-    public DateTime last_connect;
-    public override string ToString()
-    {
-        return $"exceptions={exceptions}, GATT disconnects={GATT_disconnects}, subscribes={subcribes}, requests={requests}, responses={responses}, response time={responseTime}, " +
-                $"last response time = {lastResponseTime}, last connect = {last_connect.ToLocalTime()}, modbus errors = {modbus_errors}";
-    }
-}
-
-/// <summary>
-/// Represents a generation setpoint or measurement results
-/// </summary>
-public class Measurement
-{
-    [JsonProperty("error")]
-    public bool Error = false;
-    
-    public DateTime Timestamp = new DateTime(2020,1,1);
-    public float? Value = 0.0f;
-    public string Unit = "";
-    public string Description ="";
-
-    // Some measure have min/max statistics returned by JS
-    public float? Minimum = null;
-    public float? Maximum = null;
-
-    // Some measurement returns several values, e.g. °C and ohms.
-    public float? SecondaryValue = null;
-    public string SecondaryUnit = "";
-    public string SecondaryDescription = "";
-
-    public override string ToString()
-    {
-        var output = $"{Description}={Value} {Unit} ({Timestamp.ToLocalTime()}), error:{Error}";
-        if (this.Minimum !=null || this.Maximum != null)
-        {
-            output += $", Maximum={this.Maximum}, Minimum={this.Minimum}";
-        }
-        if (!String.IsNullOrEmpty(SecondaryDescription) || SecondaryValue != null)
-        {
-            output += $", Secondary data: {SecondaryDescription}={SecondaryValue} {SecondaryUnit}";
-        }
-        return output;
-    }
-}
-
-/// <summary>
-/// Mapping of JS bt-seneca-msc State class to c#
-/// </summary>
-public class MSCState
-{
-    /// <summary>
-    /// True if the meter can execute commands
-    /// </summary>
-    public bool ready = false;
-    /// <summary>
-    /// True if the meter is initializing bluetooth
-    /// </summary>
-    public bool initializing = false;
-    /// <summary>
-    /// Internal state of the state machine for debugging
-    /// </summary>
-    public string status;
-    /// <summary>
-    /// Last refreshed setpoint (valid only when generating)
-    /// </summary>
-    public Measurement lastSetpoint = new Measurement();
-    /// <summary>
-    /// Last refreshed measurement (valid only when measuring)
-    /// </summary>
-    public Measurement lastMeasure = new Measurement();
-    /// <summary>
-    /// Bluetooth device name
-    /// </summary>
-    public string deviceName = "";
-    /// <summary>
-    /// Device serial number
-    /// </summary>
-    public string deviceSerial = "";
-    /// <summary>
-    /// Current mode of the device
-    /// </summary>
-    public int deviceMode;
-    /// <summary>
-    /// Statistics for communications with the devices
-    /// </summary>
-    public MSCStats stats = new MSCStats();
-    /// <summary>
-    /// Internal battery level in volts
-    /// </summary>
-    public float batteryLevel = 0.0f;
-
-    public override string ToString()
-    {
-        return $"Ready:{ready}, Initializing:{initializing}, Status:{status}, Device name:{deviceName}, Device serial:{deviceSerial}, Mode: {(CommandType)this.deviceMode}, Battery level:{batteryLevel}, " +
-            $"Last setpoint: {lastSetpoint}, Last measure: {lastMeasure}, stats: {stats}";
-    }
-}
-
-/// <summary>
-/// Mapping of JS bt-seneca-msc Command class to c# 
-/// </summary>
-public class MSCCommand
-{
-    public int type;
-    public dynamic setpoint;
-    public bool error = false;
-    public bool pending = true;
-    public MSCCommand() { this.type = (int)CommandType.NONE_UNKNOWN; }
-    public MSCCommand(CommandType type)
-    {
-        this.type = (int)type;
-    }
-    public MSCCommand(CommandType type, float setpoint)
-    {
-        this.type = (int)type;
-        this.setpoint = setpoint;
-    }
-    public MSCCommand(CommandType type, float[] setpoints)
-    {
-        this.type = (int)type;
-        this.setpoint = setpoints;
-    }
-    public override string ToString()
-    {
-        return $"Type:{(CommandType)type}, Setpoint:{setpoint}, pending:{pending}, error:{error}";
-    }
-}
-
-/// <summary>
-/// Modes of the meter
-/// </summary>
-public enum CommandType : int
-{
-    NONE_UNKNOWN= 0, /*** MEASURING FEATURES AFTER THIS POINT *******/
-    mA_passive= 1,
-    mA_active= 2,
-    V= 3,
-    mV= 4,
-    THERMO_J= 5, // Termocoppie
-    THERMO_K= 6,
-    THERMO_T= 7,
-    THERMO_E= 8,
-    THERMO_L= 9,
-    THERMO_N= 10,
-    THERMO_R= 11,
-    THERMO_S= 12,
-    THERMO_B= 13,
-    PT100_2W= 14, // RTD 2 fili
-    PT100_3W= 15,
-    PT100_4W= 16,
-    PT500_2W= 17,
-    PT500_3W= 18,
-    PT500_4W= 19,
-    PT1000_2W= 20,
-    PT1000_3W= 21,
-    PT1000_4W= 22,
-    Cu50_2W= 23,
-    Cu50_3W= 24,
-    Cu50_4W= 25,
-    Cu100_2W= 26,
-    Cu100_3W= 27,
-    Cu100_4W= 28,
-    Ni100_2W= 29,
-    Ni100_3W= 30,
-    Ni100_4W= 31,
-    Ni120_2W= 32,
-    Ni120_3W= 33,
-    Ni120_4W= 34,
-    LoadCell= 35,   // Celle di carico
-    Frequency= 36,  // Frequenza
-    PulseTrain= 37, // Conteggio impulsi
-    RESERVED= 38,
-    RESERVED_2= 40,
-    OFF= 100, // ********* GENERATION AFTER THIS POINT *****************/
-    GEN_mA_passive= 101,
-    GEN_mA_active= 102,
-    GEN_V= 103,
-    GEN_mV= 104,
-    GEN_THERMO_J= 105,
-    GEN_THERMO_K= 106,
-    GEN_THERMO_T= 107,
-    GEN_THERMO_E= 108,
-    GEN_THERMO_L= 109,
-    GEN_THERMO_N= 110,
-    GEN_THERMO_R= 111,
-    GEN_THERMO_S= 112,
-    GEN_THERMO_B= 113,
-    GEN_PT100_2W= 114,
-    GEN_PT500_2W= 117,
-    GEN_PT1000_2W= 120,
-    GEN_Cu50_2W= 123,
-    GEN_Cu100_2W= 126,
-    GEN_Ni100_2W= 129,
-    GEN_Ni120_2W= 132,
-    GEN_LoadCell= 135,
-    GEN_Frequency= 136,
-    GEN_PulseTrain= 137,
-    GEN_RESERVED= 138,
-    // Special settings below this point
-    SETTING_RESERVED= 1000,
-    SET_UThreshold_F= 1001,
-    SET_Sensitivity_uS= 1002,
-    SET_ColdJunction= 1003,
-    SET_Ulow= 1004,
-    SET_Uhigh= 1005,
-};
 ```
