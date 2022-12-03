@@ -503,11 +503,11 @@ function makeSetpointRequest(mode, setpoint, setpoint2) {
         case CommandType.SET_ColdJunction:
             return [modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.ColdJunction, sp)]; // unclear unit
         case CommandType.SET_Ulow:
-            modbus.setFloat32LEBS(dv, 0, setpoint / MAX_U_GEN); // Must convert V into a % 0..MAX_U_GEN
+            modbus.setFloat32LEBS(dv, 0, setpoint / constants.MAX_U_GEN); // Must convert V into a % 0..MAX_U_GEN
             var sp2 = [dv.getUint16(0, false), dv.getUint16(2, false)];
             return [modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GenUlowPerc, sp2)]; // U low for freq / pulse gen
         case CommandType.SET_Uhigh:
-            modbus.setFloat32LEBS(dv, 0, setpoint / MAX_U_GEN); // Must convert V into a % 0..MAX_U_GEN
+            modbus.setFloat32LEBS(dv, 0, setpoint / constants.MAX_U_GEN); // Must convert V into a % 0..MAX_U_GEN
             var sp2 = [dv.getUint16(0, false), dv.getUint16(2, false)];
             return [modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.GenUhighPerc, sp2)]; // U high for freq / pulse gen            
         case CommandType.SET_ShutdownDelay:
