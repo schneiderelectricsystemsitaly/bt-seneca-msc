@@ -91,9 +91,9 @@ function makeFC16(address, dataAddress, array) {
     for (let i = 0; i < dataLength; i++) {
         dv.setUint16(7 + 2 * i, array[i], false);
     }
-
+    const crc = crc16(new Uint8Array(buf.slice(0, -2)))
     // add crc bytes to buffer
-    dv.setUint16(codeLength, crc16(buf.slice(0, -2)), true);
+    dv.setUint16(codeLength, crc, true);
     return buf;
 }
 
