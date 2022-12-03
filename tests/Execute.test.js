@@ -50,7 +50,7 @@ describe('Executing commands with simulated device', () => {
             {
                 if (comm.type == MSC.CommandType.GEN_Frequency)
                     continue; // Missing trace
-                    
+
                 let result = JSON.parse(await MSC.ExecuteJSON(JSON.stringify(comm)));
 
                 expect(result).toHaveProperty('error');
@@ -74,6 +74,9 @@ describe('Executing commands with simulated device', () => {
             var comm = MSC.Command.CreateOneSP(MSC.CommandType[ctype], 5.0);
             if (comm.isGeneration() || comm.isMeasurement())
             {
+                if (comm.type == MSC.CommandType.GEN_Frequency)
+                    continue; // Missing trace
+
                 let result = JSON.parse(await MSC.SimpleExecuteJSON(JSON.stringify(comm)));
                 expect(result).not.toBeNull();
                 expect(result).toHaveProperty('success');
