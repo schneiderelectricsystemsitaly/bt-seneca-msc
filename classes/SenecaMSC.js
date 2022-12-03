@@ -143,11 +143,15 @@ class SenecaMSC
     async writeSetpoints(command_type, setpoint, setpoint2) {
         var startGen;
         log.debug("\t\tSetting command:"+ command_type + ", setpoint: " + setpoint + ", setpoint 2: " + setpoint2);
-        var response = await this.SendAndResponse(senecaMB.makeSetpointRequest(command_type, setpoint, setpoint2));
-        if (response != null && !modbus.parseFC16checked(response, 0)) {
-            return ResultCode.FAILED_SHOULD_RETRY;
-        }
+        var packets = senecaMB.makeSetpointRequest(command_type, setpoint, setpoint2);
 
+        for(const p of packets) {
+            var response = await this.SendAndResponse(p);
+            if (response != null && !modbus.parseFC16checked(response, 0)) {
+                return ResultCode.FAILED_SHOULD_RETRY;
+            }
+        }
+        
         // Special handling of the SET Delay command
         switch (command_type) {
             case CommandType.SET_ShutdownDelay:
