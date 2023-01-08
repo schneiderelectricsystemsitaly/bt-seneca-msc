@@ -1,7 +1,7 @@
 /**
  * Command type, aka mode value to be written into MSC current state register
  * */
- const CommandType = {
+const CommandType = {
     NONE_UNKNOWN: 0, /*** MEASURING FEATURES AFTER THIS POINT *******/
     mA_passive: 1,
     mA_active: 2,
@@ -102,6 +102,7 @@ const ResultCode = {
     FAILED_SHOULD_RETRY: 2,
     SUCCESS: 0
 }
+
 
 const MAX_U_GEN = 27.0; // maximum voltage 
 

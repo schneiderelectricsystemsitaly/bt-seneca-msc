@@ -5,7 +5,7 @@ var CommandType = constants.CommandType;
 /**
  * Command to the meter, may include setpoint
  * */
- class Command {
+class Command {
     /**
      * Creates a new command
      * @param {CommandType} ctype
@@ -20,19 +20,16 @@ var CommandType = constants.CommandType;
         this.response = null;
     }
 
-    static CreateNoSP(ctype)
-    {
+    static CreateNoSP(ctype) {
         var cmd = new Command(ctype);
         return cmd;
     }
-    static CreateOneSP(ctype, setpoint)
-    {
+    static CreateOneSP(ctype, setpoint) {
         var cmd = new Command(ctype);
         cmd.setpoint = parseFloat(setpoint);
         return cmd;
     }
-    static CreateTwoSP(ctype, set1, set2)
-    {
+    static CreateTwoSP(ctype, set1, set2) {
         var cmd = new Command(ctype);
         cmd.setpoint = parseFloat(set1);
         cmd.setpoint2 = parseFloat(set2);;

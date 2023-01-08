@@ -40,11 +40,10 @@ describe('Executing commands with simulated device', () => {
         expect(data2.ready).toBeTruthy();
         expect(data2.initializing).toBeFalsy();
     })
-    
+
     test('JSON Execute works with Command returned', async () => {
         // Now loop through all possible commands
-        for(ctype in MSC.CommandType) 
-        {
+        for (ctype in MSC.CommandType) {
             var comm = MSC.Command.CreateTwoSP(MSC.CommandType[ctype], 5.0, 1.2);
             if (comm.isGeneration() || comm.isMeasurement())
             {
@@ -58,20 +57,19 @@ describe('Executing commands with simulated device', () => {
                 expect(result).toHaveProperty('setpoint');
                 expect(result.pending).toBeFalsy();
                 expect(result.error).toBeFalsy();
-                if (comm.isGeneration())
-                {
+                if (comm.isGeneration()) {
                     expect(result.setpoint).toBe(5);
                     expect(result.setpoint2).toBe(1.2);
                 }
             }
         }
     })
-    
-  
-    test('SimpleExecuteJSON test will all commands', async () => { 
-        for(ctype in MSC.CommandType) 
-        {
+
+
+    test('SimpleExecuteJSON test will all commands', async () => {
+        for (ctype in MSC.CommandType) {
             var comm = MSC.Command.CreateOneSP(MSC.CommandType[ctype], 5.0);
+
             if (comm.isGeneration() || comm.isMeasurement())
             {
                 if (comm.type == MSC.CommandType.GEN_Frequency)
@@ -83,8 +81,7 @@ describe('Executing commands with simulated device', () => {
                 expect(result).toHaveProperty('message');
                 expect(result).toHaveProperty('value');
                 expect(result).toHaveProperty('unit');
-                if (comm.isGeneration())
-                {
+                if (comm.isGeneration()) {
                     expect(result).toHaveProperty('secondary_unit');
                     expect(result).toHaveProperty('secondary_value');
                 }

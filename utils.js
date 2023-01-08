@@ -37,7 +37,7 @@ function isValid(ctype) {
  * @param {type} enumtype
  * @param {number} enumvalue
  */
- function Parse(enumtype, enumvalue) {
+function Parse(enumtype, enumvalue) {
     for (var enumName in enumtype) {
         if (enumtype[enumName] == enumvalue) {
             /*jshint -W061 */
@@ -51,13 +51,13 @@ function isValid(ctype) {
  * Helper function to dump arraybuffer as hex string
  * @param {ArrayBuffer} buffer
  */
- function buf2hex(buffer) { // buffer is an ArrayBuffer
+function buf2hex(buffer) { // buffer is an ArrayBuffer
     return [...new Uint8Array(buffer)]
         .map(x => x.toString(16).padStart(2, '0'))
         .join(' ');
 }
 
-function hex2buf (input) {
+function hex2buf(input) {
     if (typeof input !== 'string') {
         throw new TypeError('Expected input to be a string')
     }

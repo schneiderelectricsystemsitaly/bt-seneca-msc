@@ -88,7 +88,7 @@
         </div>
         <div class="row">
             <div class="col">
-                <input type="button" id="jsonTraces" value="Test modbus traces"  class="btn btn-info">
+                <input type="button" id="jsonTraces" value="Test modbus traces" class="btn btn-info">
                 <div id="jsonTestTraces"></div>
             </div>
         </div>
@@ -161,7 +161,7 @@
     </div>
     <script>
         // Event listeners
-        $("#jsonTraces").click( async () => {
+        $("#jsonTraces").click(async () => {
             var trace = MSC.GetJsonTraces();
             $("#jsonTestTraces").text(trace);
         })
@@ -178,10 +178,10 @@
         $("#stopBt").click(async () => {
             $("#resultStop").text("Pending...");
             var state = await MSC.GetState();
-            
+
             if (state.ready)
                 var stop = await MSC.Execute(new MSC.Command(MSC.CommandType.OFF)); // Stop the meter first
-            
+
             var res = await MSC.Stop(); // Then close interface
             $("#resultStop").text("Result STOP: " + res);
         });
@@ -231,7 +231,7 @@
                     throw new Error("Not handled:" + setpoints.length);
             }
         }
-        
+
         $("#new_command_id").change(() => {
             const value = $("#new_command_id").val();
             configureSetpoints(value);
@@ -242,7 +242,7 @@
         for (var i in MSC.CommandType) { // Will enumerate keys
             // Skip reserved commands
             var cmd = new MSC.Command(MSC.CommandType[i]);
-            if (!cmd.isValid()) 
+            if (!cmd.isValid())
                 continue;
 
             var opt = $("<option>").val(MSC.CommandType[i]).text(i);
@@ -261,7 +261,7 @@
 
         async function addRequest() {
             var type = parseInt($("#new_command_id").val());
-            
+
             var setpoint1 = $("#new_command_sp").val();
             var setpoint2 = $("#new_command_sp2").val();
             var comm;
@@ -287,9 +287,9 @@
             $("#meas").html(dumpArray(mstate.lastMeasure));
             $("#btinfo").text(mstate.deviceName);
             $("#serial").text(mstate.deviceSerial);
-            
+
             var description = "";
-            for(x in MSC.CommandType) {
+            for (x in MSC.CommandType) {
                 if (MSC.CommandType[x] === mstate.deviceMode) {
                     description = x;
                     break;

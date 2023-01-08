@@ -43,7 +43,7 @@ class APIState {
         };
 
         this.options = {
-            "forceDeviceSelection" : true
+            "forceDeviceSelection": true
         }
     }
 }

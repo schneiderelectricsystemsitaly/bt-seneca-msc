@@ -18,8 +18,7 @@ const SET_POWER_OFF = 7;
 const CLEAR_AVG_MIN_MAX = 5;
 const PULSE_CMD = 9;
 
-class SenecaMSC
-{
+class SenecaMSC {
     constructor(fnSendAndResponse) {
         this.SendAndResponse = fnSendAndResponse;
     }
@@ -28,7 +27,7 @@ class SenecaMSC
      * May throw ModbusError
      * @returns {string}
      */
-     async getSerialNumber() {
+    async getSerialNumber() {
         log.debug("\t\tReading serial number");
         var response = await this.SendAndResponse(senecaMB.makeSerialNumber());
         return senecaMB.parseSerialNumber(response);
@@ -66,14 +65,13 @@ class SenecaMSC
         var response = await this.SendAndResponse(senecaMB.makeQualityBitRequest());
         return senecaMB.isQualityValid(response);
     }
-    
+
     /**
      * Check generation error flags from meter
      * May throw ModbusError
      * @returns {boolean}
      */
-    async getGenQualityValid(current_mode)
-    {
+    async getGenQualityValid(current_mode) {
         log.debug("\t\tReading generation quality bit");
         var response = await this.SendAndResponse(senecaMB.makeGenStatusRead());
         return senecaMB.parseGenStatus(response, current_mode);
@@ -230,8 +228,7 @@ class SenecaMSC
      * @param {CommandType} command_type the new mode to set the meter in
      * @returns {ResultCode} result of the operation
      */
-    async changeMode(command_type)
-    {
+    async changeMode(command_type) {
         log.debug("\t\tSetting meter mode to :" + command_type);
         var packet = senecaMB.makeModeRequest(command_type);
         if (packet == null) {
@@ -276,4 +273,4 @@ class SenecaMSC
     }
 }
 
-module.exports = {SenecaMSC};
+module.exports = { SenecaMSC };

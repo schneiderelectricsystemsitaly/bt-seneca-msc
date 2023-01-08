@@ -1,5 +1,4 @@
-class CommandResult
-{
+class CommandResult {
     value = 0.0;
     success = false;
     message = "";

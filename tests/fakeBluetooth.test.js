@@ -64,7 +64,7 @@ describe('Simulated device basic testing', () => {
         expect(data.ready).toBeFalsy();
         expect(data.initializing).toBeFalsy();
     })
-        
+
     test('Pair succeeds', async () => {
         const result = await MSC.Pair(false);
         // Will fail without navigator object
@@ -84,7 +84,7 @@ describe('Simulated device basic testing', () => {
         expect(data2.ready).toBeTruthy();
         expect(data2.initializing).toBeFalsy();
     })
-    
+
     test('Measurement execution succeeds', async () => {
         const command = MSC.Command.CreateNoSP(MSC.CommandType.V);
         const result = await MSC.Execute(command);
@@ -92,23 +92,21 @@ describe('Simulated device basic testing', () => {
         expect(result.pending).toBeFalsy();
         expect(result.error).toBeFalsy();
     })
-    
+
     test('Generation execution succeeds', async () => {
         const command = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 1.23);
         expect(command.setpoint).toBe(1.23);
         expect(command.setpoint2).toBe(null);
-        try
-        {
+        try {
             const result = await MSC.Execute(command);
             expect(result).not.toBeNull();
             expect(result.pending).toBeFalsy();
             expect(result.error).toBeFalsy();
         }
-        catch(e)
-        {
-          // Will throw without Pair   
+        catch (e) {
+            // Will throw without Pair   
         }
-    })   
+    })
 
     test('Non-null refreshed properties of GetState', async () => {
         const data = await MSC.GetState();
@@ -138,9 +136,9 @@ describe('Simulated device basic testing', () => {
         expect(result.pending).toBeFalsy();
         expect(result.error).toBeFalsy();
         expect(result.setpoint).toBe(5);
-        expect(result.setpoint2).toBe(10);        
+        expect(result.setpoint2).toBe(10);
     })
-    
+
     test('SimpleExecute returns the right properties in CommandResult', async () => {
         var comm = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 5.0);
         let result = await MSC.SimpleExecute(comm);
@@ -164,7 +162,7 @@ describe('Simulated device basic testing', () => {
         expect(result.success).toBeTruthy();
         expect(result.message).not.toBeNull();
     })
-    
+
     test('MeterState tests', async () => {
         var state = new MeterState();
         state.mode = MSC.CommandType.Cu50_2W;

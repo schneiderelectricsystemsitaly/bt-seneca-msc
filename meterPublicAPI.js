@@ -81,7 +81,7 @@ async function GetStateJSON() {
 async function ExecuteJSON(jsonCommand) {
     let command = JSON.parse(jsonCommand);
     // deserialized object has lost its methods, let's recreate a complete one.
-    let command2 =meterApi.Command.CreateTwoSP(command.type, command.setpoint, command.setpoint2);
+    let command2 = meterApi.Command.CreateTwoSP(command.type, command.setpoint, command.setpoint2);
     return JSON.stringify(await Execute(command2));
 }
 
@@ -96,14 +96,13 @@ async function SimpleExecuteJSON(jsonCommand) {
  * Execute a command and returns the measurement or setpoint with error flag and message
  * @param {Command} command
  */
- async function SimpleExecute(command) {
+async function SimpleExecute(command) {
     const SIMPLE_EXECUTE_TIMEOUT_S = 5;
     var cr = new CommandResult();
 
     log.info("SimpleExecute called...");
 
-    if (command == null)
-    {
+    if (command == null) {
         cr.success = false;
         cr.message = "Invalid command";
         return cr;
@@ -128,38 +127,34 @@ async function SimpleExecuteJSON(jsonCommand) {
     }
 
     // Wait for completion of the command, or halt of the state machine
-    btState.command = command; 
+    btState.command = command;
     if (command != null) {
         await utils.waitForTimeout(() => !command.pending || btState.state == State.STOPPED, SIMPLE_EXECUTE_TIMEOUT_S);
     }
 
     // Check if error or timeouts
-    if (command.error || command.pending)  
-    {
+    if (command.error || command.pending) {
         cr.success = false;
         cr.message = "Error while executing the command."
         log.warn(cr.message);
-        
+
         // Reset the active command
         btState.command = null;
         return cr;
     }
 
     // State is updated by execute command, so we can use btState right away
-    if (utils.isGeneration(command.type))
-    {
+    if (utils.isGeneration(command.type)) {
         cr.value = btState.lastSetpoint["Value"];
         cr.unit = btState.lastSetpoint["Unit"];
     }
-    else if (utils.isMeasurement(command.type))
-    {
+    else if (utils.isMeasurement(command.type)) {
         cr.value = btState.lastMeasure["Value"];
         cr.unit = btState.lastMeasure["Unit"];
         cr.secondary_value = btState.lastMeasure["SecondaryValue"];
         cr.secondary_unit = btState.lastMeasure["SecondaryUnit"];
     }
-    else
-    {
+    else {
         cr.value = 0.0; // Settings commands;
     }
 
@@ -179,7 +174,7 @@ async function Execute(command) {
 
     if (command == null)
         return null;
-        
+
     command.pending = true;
 
     var cpt = 0;
@@ -188,7 +183,7 @@ async function Execute(command) {
         await utils.sleep(100);
         cpt++;
     }
-    
+
     log.info("Setting new command :" + command);
     btState.command = command;
 
@@ -202,7 +197,7 @@ async function Execute(command) {
     if (command != null) {
         await utils.waitFor(() => !command.pending || btState.state == State.STOPPED);
     }
-    
+
     // Return the command object result
     return command;
 }
@@ -211,9 +206,9 @@ async function Execute(command) {
  * MUST BE CALLED FROM A USER GESTURE EVENT HANDLER
   * @returns {boolean} true if meter is ready to execute command
  * */
-async function Pair(forceSelection=false) {
-    log.info("Pair("+forceSelection+") called...");
-    
+async function Pair(forceSelection = false) {
+    log.info("Pair(" + forceSelection + ") called...");
+
     btState.options["forceDeviceSelection"] = forceSelection;
 
     if (!btState.started) {
@@ -237,9 +232,8 @@ async function Stop() {
     btState.stopRequest = true;
     await utils.sleep(100);
 
-    while(btState.started || (btState.state != State.STOPPED && btState.state != State.NOT_CONNECTED))
-    {
-        btState.stopRequest = true;    
+    while (btState.started || (btState.state != State.STOPPED && btState.state != State.NOT_CONNECTED)) {
+        btState.stopRequest = true;
         await utils.sleep(100);
     }
     btState.command = null;
@@ -248,4 +242,4 @@ async function Stop() {
     return true;
 }
 
-module.exports = {Stop,Pair,Execute,ExecuteJSON,SimpleExecute,SimpleExecuteJSON,GetState,GetStateJSON}
+module.exports = { Stop, Pair, Execute, ExecuteJSON, SimpleExecute, SimpleExecuteJSON, GetState, GetStateJSON }

@@ -3,7 +3,7 @@ var constants = require('../constants');
 /**
  * Current state of the meter
  * */
- class MeterState {
+class MeterState {
     constructor() {
         this.firmware = ""; // Firmware version
         this.serial = ""; // Serial number
