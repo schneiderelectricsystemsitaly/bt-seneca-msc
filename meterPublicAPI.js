@@ -8,13 +8,13 @@
  * 5- SimpleExecute(Command) : returns the updated measurement or null
  */
 
-var CommandResult = require('./classes/CommandResult');
-var APIState = require('./classes/APIState');
-var constants = require('./constants');
-var bluetooth = require('./bluetooth');
-var utils = require('./utils');
-var log = require('loglevel');
-var meterApi = require('./meterApi');
+var CommandResult = require("./classes/CommandResult");
+var APIState = require("./classes/APIState");
+var constants = require("./constants");
+var bluetooth = require("./bluetooth");
+var utils = require("./utils");
+var log = require("loglevel");
+var meterApi = require("./meterApi");
 
 var btState = APIState.btState;
 var State = constants.State;
@@ -24,45 +24,45 @@ var State = constants.State;
  * @returns {array} status of meter
  */
 async function GetState() {
-    let ready = false;
-    let initializing = false;
-    switch (btState.state) {
-        // States requiring user input
-        case State.ERROR:
-        case State.STOPPED:
-        case State.NOT_CONNECTED:
-            ready = false;
-            initializing = false;
-            break;
-        case State.BUSY:
-        case State.IDLE:
-            ready = true;
-            initializing = false;
-            break;
-        case State.CONNECTING:
-        case State.DEVICE_PAIRED:
-        case State.METER_INIT:
-        case State.METER_INITIALIZING:
-        case State.SUBSCRIBING:
-            initializing = true;
-            ready = false;
-            break;
-        default:
-            ready = false;
-            initializing = false;
-    }
-    return {
-        "lastSetpoint": btState.lastSetpoint,
-        "lastMeasure": btState.lastMeasure,
-        "deviceName": btState.btDevice ? btState.btDevice.name : "",
-        "deviceSerial": btState.meter?.serial,
-        "stats": btState.stats,
-        "deviceMode": btState.meter?.mode,
-        "status": btState.state,
-        "batteryLevel": btState.meter?.battery,
-        "ready": ready,
-        "initializing": initializing
-    };
+	let ready = false;
+	let initializing = false;
+	switch (btState.state) {
+	// States requiring user input
+	case State.ERROR:
+	case State.STOPPED:
+	case State.NOT_CONNECTED:
+		ready = false;
+		initializing = false;
+		break;
+	case State.BUSY:
+	case State.IDLE:
+		ready = true;
+		initializing = false;
+		break;
+	case State.CONNECTING:
+	case State.DEVICE_PAIRED:
+	case State.METER_INIT:
+	case State.METER_INITIALIZING:
+	case State.SUBSCRIBING:
+		initializing = true;
+		ready = false;
+		break;
+	default:
+		ready = false;
+		initializing = false;
+	}
+	return {
+		"lastSetpoint": btState.lastSetpoint,
+		"lastMeasure": btState.lastMeasure,
+		"deviceName": btState.btDevice ? btState.btDevice.name : "",
+		"deviceSerial": btState.meter?.serial,
+		"stats": btState.stats,
+		"deviceMode": btState.meter?.mode,
+		"status": btState.state,
+		"batteryLevel": btState.meter?.battery,
+		"ready": ready,
+		"initializing": initializing
+	};
 }
 
 /**
@@ -70,7 +70,7 @@ async function GetState() {
  * @returns {string} JSON state object
  */
 async function GetStateJSON() {
-    return JSON.stringify(await GetState());
+	return JSON.stringify(await GetState());
 }
 
 /**
@@ -79,17 +79,17 @@ async function GetStateJSON() {
  * @returns {string} JSON command object
  */
 async function ExecuteJSON(jsonCommand) {
-    let command = JSON.parse(jsonCommand);
-    // deserialized object has lost its methods, let's recreate a complete one.
-    let command2 = meterApi.Command.CreateTwoSP(command.type, command.setpoint, command.setpoint2);
-    return JSON.stringify(await Execute(command2));
+	let command = JSON.parse(jsonCommand);
+	// deserialized object has lost its methods, let's recreate a complete one.
+	let command2 = meterApi.Command.CreateTwoSP(command.type, command.setpoint, command.setpoint2);
+	return JSON.stringify(await Execute(command2));
 }
 
 async function SimpleExecuteJSON(jsonCommand) {
-    let command = JSON.parse(jsonCommand);
-    // deserialized object has lost its methods, let's recreate a complete one.
-    let command2 = meterApi.Command.CreateTwoSP(command.type, command.setpoint, command.setpoint2);
-    return JSON.stringify(await SimpleExecute(command2));
+	let command = JSON.parse(jsonCommand);
+	// deserialized object has lost its methods, let's recreate a complete one.
+	let command2 = meterApi.Command.CreateTwoSP(command.type, command.setpoint, command.setpoint2);
+	return JSON.stringify(await SimpleExecute(command2));
 }
 
 /**
@@ -97,70 +97,70 @@ async function SimpleExecuteJSON(jsonCommand) {
  * @param {Command} command
  */
 async function SimpleExecute(command) {
-    const SIMPLE_EXECUTE_TIMEOUT_S = 5;
-    var cr = new CommandResult();
+	const SIMPLE_EXECUTE_TIMEOUT_S = 5;
+	var cr = new CommandResult();
 
-    log.info("SimpleExecute called...");
+	log.info("SimpleExecute called...");
 
-    if (command == null) {
-        cr.success = false;
-        cr.message = "Invalid command";
-        return cr;
-    }
+	if (command == null) {
+		cr.success = false;
+		cr.message = "Invalid command";
+		return cr;
+	}
 
-    command.pending = true; // In case caller does not set pending flag
+	command.pending = true; // In case caller does not set pending flag
 
-    // Fail immediately if not paired.
-    if (!btState.started) {
-        cr.success = false;
-        cr.message = "Device is not paired";
-        log.warn(cr.message);
-        return cr;
-    }
+	// Fail immediately if not paired.
+	if (!btState.started) {
+		cr.success = false;
+		cr.message = "Device is not paired";
+		log.warn(cr.message);
+		return cr;
+	}
 
-    // Another command may be pending.
-    if (btState.command != null && btState.command.pending) {
-        cr.success = false;
-        cr.message = "Another command is pending";
-        log.warn(cr.message);
-        return cr;
-    }
+	// Another command may be pending.
+	if (btState.command != null && btState.command.pending) {
+		cr.success = false;
+		cr.message = "Another command is pending";
+		log.warn(cr.message);
+		return cr;
+	}
 
-    // Wait for completion of the command, or halt of the state machine
-    btState.command = command;
-    if (command != null) {
-        await utils.waitForTimeout(() => !command.pending || btState.state == State.STOPPED, SIMPLE_EXECUTE_TIMEOUT_S);
-    }
+	// Wait for completion of the command, or halt of the state machine
+	btState.command = command;
+	if (command != null) {
+		await utils.waitForTimeout(() => !command.pending || btState.state == State.STOPPED, SIMPLE_EXECUTE_TIMEOUT_S);
+	}
 
-    // Check if error or timeouts
-    if (command.error || command.pending) {
-        cr.success = false;
-        cr.message = "Error while executing the command."
-        log.warn(cr.message);
+	// Check if error or timeouts
+	if (command.error || command.pending) {
+		cr.success = false;
+		cr.message = "Error while executing the command.";
+		log.warn(cr.message);
 
-        // Reset the active command
-        btState.command = null;
-        return cr;
-    }
+		// Reset the active command
+		btState.command = null;
+		return cr;
+	}
 
-    // State is updated by execute command, so we can use btState right away
-    if (utils.isGeneration(command.type)) {
-        cr.value = btState.lastSetpoint["Value"];
-        cr.unit = btState.lastSetpoint["Unit"];
-    }
-    else if (utils.isMeasurement(command.type)) {
-        cr.value = btState.lastMeasure["Value"];
-        cr.unit = btState.lastMeasure["Unit"];
-        cr.secondary_value = btState.lastMeasure["SecondaryValue"];
-        cr.secondary_unit = btState.lastMeasure["SecondaryUnit"];
-    }
-    else {
-        cr.value = 0.0; // Settings commands;
-    }
+	// State is updated by execute command, so we can use btState right away
+	if (utils.isGeneration(command.type)) {
+		cr.value = btState.lastSetpoint["Value"];
+		cr.unit = btState.lastSetpoint["Unit"];
+	}
+	else if (utils.isMeasurement(command.type)) {
+		cr.value = btState.lastMeasure["Value"];
+		cr.unit = btState.lastMeasure["Unit"];
+		cr.secondary_value = btState.lastMeasure["SecondaryValue"];
+		cr.secondary_unit = btState.lastMeasure["SecondaryUnit"];
+	}
+	else {
+		cr.value = 0.0; // Settings commands;
+	}
 
-    cr.success = true;
-    cr.message = "Command executed successfully";
-    return cr;
+	cr.success = true;
+	cr.message = "Command executed successfully";
+	return cr;
 }
 
 /**
@@ -170,36 +170,36 @@ async function SimpleExecute(command) {
  * @param {Command} command
  */
 async function Execute(command) {
-    log.info("Execute called...");
+	log.info("Execute called...");
 
-    if (command == null)
-        return null;
+	if (command == null)
+		return null;
 
-    command.pending = true;
+	command.pending = true;
 
-    var cpt = 0;
-    while (btState.command != null && btState.command.pending && cpt < 300) {
-        log.debug("Waiting for current command to complete...");
-        await utils.sleep(100);
-        cpt++;
-    }
+	var cpt = 0;
+	while (btState.command != null && btState.command.pending && cpt < 300) {
+		log.debug("Waiting for current command to complete...");
+		await utils.sleep(100);
+		cpt++;
+	}
 
-    log.info("Setting new command :" + command);
-    btState.command = command;
+	log.info("Setting new command :" + command);
+	btState.command = command;
 
-    // Start the regular state machine
-    if (!btState.started) {
-        btState.state = State.NOT_CONNECTED;
-        await bluetooth.stateMachine();
-    }
+	// Start the regular state machine
+	if (!btState.started) {
+		btState.state = State.NOT_CONNECTED;
+		await bluetooth.stateMachine();
+	}
 
-    // Wait for completion of the command, or halt of the state machine
-    if (command != null) {
-        await utils.waitFor(() => !command.pending || btState.state == State.STOPPED);
-    }
+	// Wait for completion of the command, or halt of the state machine
+	if (command != null) {
+		await utils.waitFor(() => !command.pending || btState.state == State.STOPPED);
+	}
 
-    // Return the command object result
-    return command;
+	// Return the command object result
+	return command;
 }
 
 /**
@@ -207,39 +207,39 @@ async function Execute(command) {
   * @returns {boolean} true if meter is ready to execute command
  * */
 async function Pair(forceSelection = false) {
-    log.info("Pair(" + forceSelection + ") called...");
+	log.info("Pair(" + forceSelection + ") called...");
 
-    btState.options["forceDeviceSelection"] = forceSelection;
+	btState.options["forceDeviceSelection"] = forceSelection;
 
-    if (!btState.started) {
-        btState.state = State.NOT_CONNECTED;
-        bluetooth.stateMachine(); // Start it
-    }
-    else if (btState.state == State.ERROR) {
-        btState.state = State.NOT_CONNECTED; // Try to restart
-    }
-    await utils.waitFor(() => btState.state == State.IDLE || btState.state == State.STOPPED);
-    log.info("Pairing completed, state :", btState.state);
-    return (btState.state != State.STOPPED);
+	if (!btState.started) {
+		btState.state = State.NOT_CONNECTED;
+		bluetooth.stateMachine(); // Start it
+	}
+	else if (btState.state == State.ERROR) {
+		btState.state = State.NOT_CONNECTED; // Try to restart
+	}
+	await utils.waitFor(() => btState.state == State.IDLE || btState.state == State.STOPPED);
+	log.info("Pairing completed, state :", btState.state);
+	return (btState.state != State.STOPPED);
 }
 
 /**
  * Stops the state machine and disconnects bluetooth.
  * */
 async function Stop() {
-    log.info("Stop request received");
+	log.info("Stop request received");
 
-    btState.stopRequest = true;
-    await utils.sleep(100);
+	btState.stopRequest = true;
+	await utils.sleep(100);
 
-    while (btState.started || (btState.state != State.STOPPED && btState.state != State.NOT_CONNECTED)) {
-        btState.stopRequest = true;
-        await utils.sleep(100);
-    }
-    btState.command = null;
-    btState.stopRequest = false;
-    log.warn("Stopped on request.");
-    return true;
+	while (btState.started || (btState.state != State.STOPPED && btState.state != State.NOT_CONNECTED)) {
+		btState.stopRequest = true;
+		await utils.sleep(100);
+	}
+	btState.command = null;
+	btState.stopRequest = false;
+	log.warn("Stopped on request.");
+	return true;
 }
 
-module.exports = { Stop, Pair, Execute, ExecuteJSON, SimpleExecute, SimpleExecuteJSON, GetState, GetStateJSON }
+module.exports = { Stop, Pair, Execute, ExecuteJSON, SimpleExecute, SimpleExecuteJSON, GetState, GetStateJSON };
