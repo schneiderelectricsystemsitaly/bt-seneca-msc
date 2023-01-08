@@ -103,4 +103,7 @@ const ResultCode = {
     SUCCESS: 0
 }
 
-module.exports = { State, CommandType, ResultCode }
+
+const MAX_U_GEN = 27.0; // maximum voltage 
+
+module.exports = {State, CommandType, ResultCode, MAX_U_GEN }

@@ -309,7 +309,8 @@ const howmany = Object.keys(setpoints).length;
 
 * Pushes to main will trigger GitHub actions for CI and NPM package update. If the package.json has a new version respect to NPM repository, it will be published automatically. Also, pushes to main branch update the Github pages with the sample application.
 * Most development shall happen in development branch, then PR to main once ready.
-* Testing is difficult without a real device due to the bluetooth interface. Only basic API tests are covered by JEST package. To run tests:
+* Testing is peculiar due to bluetooth interface and real device requirements.
+* To workaround this issue, I captured traces of modbus RTU packets in hex format (see docs/captured traces.txt), and added a simulation flag into the bluetooth module. When this simulation flag is set, the device modbus RTU answers will be either forged on the fly (e.g. state inquiry), taken from the registered "real trace", or taken from default FC 03 / FC 10 modbus answer. In this way, the code testing coverage remains pretty decent without a real device.
 
 ```bash
 npm test

@@ -2,8 +2,6 @@ var constants = require('../constants');
 var utils = require('../utils');
 var CommandType = constants.CommandType;
 
-const MAX_U_GEN = 27.0; // maximum voltage 
-
 /**
  * Command to the meter, may include setpoint
  * */
@@ -86,9 +84,9 @@ class Command {
             case CommandType.SET_ColdJunction:
                 return { 'Cold junction compensation': 0.0 };
             case CommandType.SET_Ulow:
-                return { 'U low (V)': 0.0 / MAX_U_GEN };
+                return { 'U low (V)': 0.0 / constants.MAX_U_GEN };
             case CommandType.SET_Uhigh:
-                return { 'U high (V)': 5.0 / MAX_U_GEN };
+                return { 'U high (V)': 5.0 / constants.MAX_U_GEN };
             case CommandType.SET_ShutdownDelay:
                 return { 'Delay (s)': 60 * 5 };
             default:
