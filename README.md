@@ -1,13 +1,13 @@
 # bt-seneca-msc project
 
-A pure Javascript API for the Seneca Multi Smart Calibrator device, using web bluetooth.
+Check sample application is available here: :point_right: [https://schneiderelectricsystemsitaly.github.io/bt-seneca-msc/](https://schneiderelectricsystemsitaly.github.io/bt-seneca-msc/) :point_left:
+
+A pure Javascript API for the Seneca Multi Smart Calibrator device, using web bluetooth from recent browsers.
 
 This package has only one logger package as dependency, it implements modbus RTU FC3/FC16 functions. The reason is that most modbus implementations I found are requiring Node.js environment, whereas my goal was to run in a pure browser environment.
 This oackage has been tested with a Seneca MSC device with firmware 1.0.44 ; testing was performed on PC/Windows with Chrome and Edge and Android Samsung S10 phone.
 The distribution versions are CommonJS (browserified with a standalone MSC object) ; examples below.
 This package can probably be adapted from Bluetooth to serial comm with little effort, but at the time I don't need it.
-
-* A sample application is available here: :point_right: https://pbrunot.github.io/bt-seneca-msc/ :point_left:
 
 ## Requirements and limitations
 
