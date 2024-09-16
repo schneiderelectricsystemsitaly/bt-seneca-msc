@@ -13,18 +13,18 @@ jobs:
       packages: write 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@master
+      uses: actions/checkout@v4
     - name: Set up Node.js
-      uses: actions/setup-node@master
+      uses: actions/setup-node@v3
       with:
-        node-version: 16
+        node-version: 20
         registry-url: https://registry.npmjs.org
     - run: npm ci
     - run: npm run dist # build the minified version
     - run: npm run dev  # build the CommonJS non-minified version
     - run: npm test     # run tests
     - id: publish
-      uses: JS-DevTools/npm-publish@v1
+      uses: JS-DevTools/npm-publish@v3
       with:
         token: ${{ secrets.NPM_AUTH_TOKEN }}
     - if: steps.publish.outputs.type != 'none'
