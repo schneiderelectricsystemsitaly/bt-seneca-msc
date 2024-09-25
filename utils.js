@@ -22,7 +22,7 @@ function isGeneration(ctype) {
 	return (ctype > CommandType.OFF && ctype < CommandType.GEN_RESERVED);
 }
 function isMeasurement(ctype) {
-	return (ctype > CommandType.NONE_UNKNOWN && ctype < CommandType.RESERVED);
+	return (ctype > CommandType.NONE_UNKNOWN && ctype < CommandType.RESERVED || ctype == CommandType.Continuity);
 }
 function isSetting(ctype) {
 	return (ctype == CommandType.OFF || ctype > CommandType.SETTING_RESERVED);

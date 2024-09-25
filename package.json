@@ -1,6 +1,6 @@
 {
   "name": "bt-seneca-msc",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "A pure Javascript API for the Seneca Multi Smart Calibrator (MSC) device, using web bluetooth.",
   "main": "js/meterApi.js",
   "keywords": [
@@ -18,16 +18,16 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+httnps://github.com/PBrunot/bt-seneca-msc.git"
+    "url": "git+httnps://github.com/schneiderelectricsystemsitaly/bt-seneca-msc.git"
   },
   "dependencies": {
     "loglevel": "^1.0.0"
   },
   "devDependencies": {
     "browserify": "^17.0.0",
-    "eslint": "^8.31.0",
-    "jest": "^28.1.2",
-    "jest-environment-jsdom": "^28.1.2",
+    "eslint": "^9.0.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "uglify-js": "^3.16.1"
   },
   "author": "Pascal Brunot",
@@ -37,7 +37,7 @@
   },
   "homepage": "https://github.com/PBrunot/bt-seneca-msc#readme",
   "scripts": {
-    "test": "jest",
+    "test": "jest --verbose",
     "dist": "browserify meterApi.js --standalone MSC --debug | uglifyjs --source-map -o ./dist/bt-seneca-msc.min.js",
     "dev": "browserify meterApi.js --standalone MSC --debug -o ./dist/bt-seneca-msc.js"
   }

@@ -57,6 +57,7 @@ describe("Executing commands with simulated device", () => {
 				expect(result).toHaveProperty("setpoint");
 				expect(result.pending).toBeFalsy();
 				expect(result.error).toBeFalsy();
+				console.log('command=%s -> %s', comm, result);
 				if (comm.isGeneration()) {
 					expect(result.setpoint).toBe(5);
 					expect(result.setpoint2).toBe(1.2);
@@ -87,6 +88,7 @@ describe("Executing commands with simulated device", () => {
 				}
 				expect(result.success).toBeTruthy();
 				expect(result.message).not.toBeNull();
+				console.log('SimpleExecuteJSON=%s -> %s', comm, result);
 			}
 		}
 	});

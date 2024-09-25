@@ -28,6 +28,9 @@ class APIState {
 		this.btService = null;
 		this.btDevice = null;
 
+		// emulated continuity checker
+		this.continuity = false;
+
 		// general statistics for debugging
 		this.stats = {
 			"requests": 0,
