@@ -8,3 +8,4 @@ coverage/
 bt-iotesting.code-workspace
 /js
 
+.claude/settings.local.json
