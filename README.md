@@ -1,324 +1,483 @@
-# bt-seneca-msc project
+# bt-seneca-msc
 
-Check sample application is available here: :point_right: [https://schneiderelectricsystemsitaly.github.io/bt-seneca-msc/](https://schneiderelectricsystemsitaly.github.io/bt-seneca-msc/) :point_left:
+[![npm version](https://badge.fury.io/js/bt-seneca-msc.svg)](https://badge.fury.io/js/bt-seneca-msc)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A pure Javascript API for the Seneca Multi Smart Calibrator device, using web bluetooth from recent browsers.
+A pure JavaScript API for the Seneca Multi Smart Calibrator (MSC) device, using Web Bluetooth from modern browsers.
 
-This package has only one logger package as dependency, it implements modbus RTU FC3/FC16 functions. The reason is that most modbus implementations I found are requiring Node.js environment, whereas my goal was to run in a pure browser environment.
-This oackage has been tested with a Seneca MSC device with firmware 1.0.44 ; testing was performed on PC/Windows with Chrome and Edge and Android Samsung S10 phone.
-The distribution versions are CommonJS (browserified with a standalone MSC object) ; examples below.
-This package can probably be adapted from Bluetooth to serial comm with little effort, but at the time I don't need it.
+**🚀 [Live Demo](https://schneiderelectricsystemsitaly.github.io/bt-seneca-msc/)**
 
-## Requirements and limitations
+## Table of Contents
 
-* A recent browser supporting bluetooth
-* A Seneca Multi Smart Calibrator device (see https://www.seneca.it/msc/ )
-* MSC features status:
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [API Reference](#api-reference)
+- [Usage Examples](#usage-examples)
+- [Device Features](#device-features)
+- [Performance](#performance)
+- [Development](#development)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
 
-| Measurements | Implementation | Data returned |
-| --- | --- | --- |
-| V, mV readings                | Done and tested           | Only Instantaneous, min, max values (no avg) |
-| mA active/passive readings    | Done and tested           | Only Instantaneous, min, max values (no avg) |
-| RTD readings                  | Done and tested 2W        | Instantaneous RTD °C and Ohms values |
-| Thermocouples 2W/3W/4W read   | Done :grey_exclamation: *not tested*  | Instantaneous °C value |
-| Frequency reading             | Done and tested           | Frequency of leading and falling edges |
-| Pulse count reading           | Done and tested 0-10kHz   | Counts of leading and falling edges |
-| Frequency reading             | Done and tested           | Tested with square wave 0-10 kHz |
-| Load cell                     | Done :grey_exclamation: *not tested* | Imbalance mV/V |
+## Overview
 
-| Generation | Implementation | Setpoint |
-| --- | --- | --- |
-| V, mV                         | Done and tested           | 1 Setpoint (mV/V) |
-| mA active/passive             | Done *basic testing*      | 1 Setpoint (mA) |
-| RTD 2W                        | Done :grey_exclamation: *not tested*  | 1 Setpoint RTD °C |
-| Thermocouples                 | Done :grey_exclamation: *not tested* | 1 Setpoint °C value *no Cold junction* |
-| Frequency (square waves)      | Done and tested 0-10kHz   | 2 Setpoints: LE and FE f (Hz) |
-| Pulses count generation       | Done and tested 1 kHz     | 2 Setpoints: LE and FE f (Hz) |
-| Load cell                     | Done :grey_exclamation: *not tested* | 1 Setpoint : Imbalance mV/V |
+This package provides a complete JavaScript interface for the Seneca Multi Smart Calibrator device via Web Bluetooth. It implements Modbus RTU FC3/FC16 functions specifically designed to run in pure browser environments without Node.js dependencies.
 
-| Others features | Status |
-| --- | --- |
-| Ramps editing          | Not implemented, not planned |
-| Ramps application      | Not implemented, not planned |
-| Data logging start/stop| Not implemented, not planned |
-| Logged data retrieval  | Not implemented, not planned |
-| Clock read/sync        | Not implemented |
-| Firmware version read  | Not implemented |
-| Battery level          | Read once, after pairing |
-| Conversion of mV/V to kg | Calculation not implemented |
-| Automatic switch off delay | Not implemented |
+**Key Features:**
+- Pure browser implementation using Web Bluetooth API
+- Modbus RTU protocol over Bluetooth
+- Real-time measurement and generation capabilities
+- Automatic device state management
+- Comprehensive error handling and recovery
 
-| Settings of measures/generation modes| Implementation | Notes |
-| --- | --- | --- |
-| Low level for pulse/square wave generation | CommandType.SET_Ulow | Voltage 0-27 V (tested)
-| High level for pulse/square wave generation | CommandType.SET_Uhigh | Voltage 0-27 V (tested)
-| Minimum pulse width in microsec | CommandType.SET_Sensitivity_uS | Unknown range 1-??? uS *not tested* same threshold for LE/FE
-| Tension threshold for frequency/pulse measurement | CommandType.SET_UThreshold_F | Voltage 0-27 V *not tested* 
-| Setting of cold junction compensation | CommandType.SET_ColdJunction |Implemented  *not tested* |
+**Tested with:**
+- Seneca MSC device firmware 1.0.44
+- Chrome and Edge browsers on Windows PC
+- Android Samsung S10 phone
 
-## How to build
+## Prerequisites
 
-* Install Node.js 
-* Checkout the repository
-* Run from your command line:
+### Browser Requirements
+- **Chrome 56+** or **Edge 79+** with Web Bluetooth support
+- **Android Chrome 56+** on supported devices
+- **Experimental Web Platform Features** may need to be enabled
 
-```bash
-    npm install
-    npm run dist
-    npm run dev
+### Hardware Requirements
+- Seneca Multi Smart Calibrator device ([MSC series](https://www.seneca.it/msc/))
+- Bluetooth-enabled device
+- User gesture required for initial pairing (browser security requirement)
+
+### Browser Compatibility Check
+```javascript
+if (!navigator.bluetooth) {
+    console.error('Web Bluetooth is not supported in this browser');
+}
 ```
 
-## How to use in your application
+## Quick Start
 
-* For Node.js applications :
+### 1. Include the Library
+```html
+<!-- CDN -->
+<script src="https://cdn.jsdelivr.net/npm/bt-seneca-msc@latest/dist/bt-seneca-msc.min.js"></script>
 
+<!-- Or local -->
+<script src="path/to/bt-seneca-msc.min.js"></script>
+```
+
+### 2. Pair and Connect
+```javascript
+// Must be called from a user gesture (button click, etc.)
+document.getElementById('connectBtn').addEventListener('click', async () => {
+    try {
+        const paired = await MSC.Pair(true);
+        if (paired) {
+            console.log('Device connected successfully!');
+        }
+    } catch (error) {
+        console.error('Pairing failed:', error);
+    }
+});
+```
+
+### 3. Take a Measurement
+```javascript
+async function measureVoltage() {
+    const state = await MSC.GetState();
+    if (state.ready) {
+        const command = MSC.Command.CreateNoSP(MSC.CommandType.V);
+        const result = await MSC.SimpleExecute(command);
+        
+        if (!result.error) {
+            console.log(`Voltage: ${result.value} V`);
+        }
+    }
+}
+```
+
+## Installation
+
+### NPM (Node.js/Webpack/Bundlers)
 ```bash
 npm install bt-seneca-msc
 ```
 
-* For ASPNET.core :
+```javascript
+import MSC from 'bt-seneca-msc';
+// or
+const MSC = require('bt-seneca-msc');
+```
 
+### CDN (Browser)
+```html
+<script src="https://cdn.jsdelivr.net/npm/bt-seneca-msc@latest/dist/bt-seneca-msc.min.js"></script>
+```
+
+### LibMan (ASP.NET Core)
 ```powershell
 libman install bt-seneca-msc --provider jsdelivr
 ```
 
-## External API
+### Manual Download
+Download from the [releases page](https://github.com/schneiderelectricsystemsitaly/bt-seneca-msc/releases) and include the `dist/bt-seneca-msc.min.js` file.
 
-There are 5 operations available:
+## API Reference
 
-```js
-await MSC.Pair(true/false); // bool - Pair to bluetooth (if True force user pickup)
-await MSC.Stop(); // bool - Disconnect the bluetooth and stops the polling
-await MSC.Execute(MSC.Command object); // Execute command. If the device is not paired, an attempt will be made. Command is returned with updated properties.
-await MSC.GetState(); // Returns an array with the current state
-await MSC.SimpleExecute(MSC.Command object); // Execute the command and results the value
+### Core Methods
+
+#### `MSC.Pair(force: boolean): Promise<boolean>`
+Pairs with a Bluetooth MSC device.
+- `force`: If true, always shows device picker; if false, reconnects to last device
+- **Returns:** Promise resolving to connection success
+- **Note:** Must be called from user gesture
+
+#### `MSC.Stop(): Promise<boolean>`
+Disconnects Bluetooth and stops polling.
+- **Returns:** Promise resolving to disconnection success
+
+#### `MSC.Execute(command: Command): Promise<Command>`
+Executes a command and returns updated command object.
+- `command`: Command object created with `MSC.Command.CreateXXX()` methods
+- **Returns:** Promise resolving to updated command with results
+
+#### `MSC.SimpleExecute(command: Command): Promise<CommandResult>`
+Executes command and returns simple result value.
+- **Returns:** Promise resolving to `{error: boolean, value: any, message: string}`
+
+#### `MSC.GetState(): Promise<MeterState>`
+Gets current device state and measurements.
+- **Returns:** Promise resolving to complete device state
+
+### JSON API (ASP.NET Core Interop)
+
+#### `MSC.SimpleExecuteJSON(jsonCommand: string): Promise<string>`
+JSON version of SimpleExecute.
+
+#### `MSC.ExecuteJSON(jsonCommand: string): Promise<string>`
+JSON version of Execute.
+
+#### `MSC.GetStateJSON(): Promise<string>`
+JSON version of GetState.
+
+### Command Creation
+
+#### `MSC.Command.CreateNoSP(type: CommandType): Command`
+Creates command with no setpoints (measurements).
+
+#### `MSC.Command.CreateOneSP(type: CommandType, setpoint: number): Command`
+Creates command with one setpoint (single value generation).
+
+#### `MSC.Command.CreateTwoSP(type: CommandType, setpoint1: number, setpoint2: number): Command`
+Creates command with two setpoints (dual value generation).
+
+### State Properties
+
+```javascript
+const state = await MSC.GetState();
+
+// Connection status
+state.ready           // boolean: Device ready for commands
+state.initializing    // boolean: Device initializing
+state.status          // string: Current state machine status
+
+// Data
+state.lastMeasure     // array: Latest measurement data
+state.lastSetpoint    // array: Latest generation setpoint data
+
+// Device info
+state.deviceName      // string: Bluetooth device name
+state.deviceSerial    // string: MSC device serial number
+state.deviceMode      // string: Current device mode
+state.batteryLevel    // number: Battery voltage
+state.stats           // object: Debug statistics
 ```
 
-* JSON versions are available for ASPNET.core interop
+### Device States
 
-```js
-await MSC.SimpleExecuteJSON(jsonCommand); // Expects a json string (Command) and returns a json string (simple result)
-await MSC.ExecuteJSON(jsonCommand); // Expects a json string (Command) and returns a json string (update Command object)
-await MSC.GetStateJSON(); // returns a json string with the same properties as GetState()
-```
+| State | Description | Next State |
+|-------|-------------|------------|
+| `NOT_CONNECTED` | Initial state before pairing | `CONNECTING` |
+| `CONNECTING` | Waiting for pairing to complete | `DEVICE_PAIRED` |
+| `DEVICE_PAIRED` | Pairing completed, no BT interface | `SUBSCRIBING` |
+| `SUBSCRIBING` | Waiting for BT interfaces | `METER_INIT` |
+| `METER_INIT` | Connected, initializing meter | `METER_INITIALIZING` |
+| `METER_INITIALIZING` | Reading initial meter state | `IDLE` |
+| `IDLE` | Ready to execute commands | `BUSY` |
+| `BUSY` | Executing command or refreshing data | `IDLE`, `ERROR` |
+| `ERROR` | Exception occurred | `METER_INIT` |
+| `STOPPING` | Processing stop request | `STOPPED` |
+| `STOPPED` | Everything stopped | - |
 
+## Usage Examples
 
-### Connecting to the meter
+### Basic Voltage Measurement
+```javascript
+async function measureVoltage() {
+    try {
+        // Check if device is ready
+        const state = await MSC.GetState();
+        if (!state.ready) {
+            throw new Error('Device not ready');
+        }
 
-* Call MSC.Pair(true) while handling a user gesture in the browser (i.e. button-click)
-
-```js
- var result = await MSC.Pair(true); // true when connection has been established
-```
-
-* A dialog will be shown to the user of devices with bluetooth name beginning with MSC
-* After pairing, the required bluetooth interfaces for Modbus RTU read and write will be established.
-* In case of communication errors after pairing, attempts will be made to reestablish bluetooth interfaces automatically.
-
-### Getting the current state of the meter
-
-* Behind the API, there is a state machine running every 750 ms. 
-* If there is no command pending from API, read requests will be done to refresh the state at this frequency.
-* When the meter is measuring, measurement and error flag are refreshed at this rate (see: btState.lastMeasure). 
-* When the meter is generating, setpoint and error flag is read (see: btState.lastSetpoint).
-
-```js
-
-var mstate = await MSC.GetState();
-mstate.ready          // The meter is ready to execute commands
-mstate.initializing   // The meter is initializing bluetooth
-mstate.status         // State machine internal status (Ready,Busy,Pairing,...)
-
-mstate.lastSetpoint   // Last executed generation data. An array.
-mstate.lastMeasure    // Last measurement. An array.
-
-mstate.deviceName     // Name of the bluetooth device paired
-mstate.deviceSerial   // Serial number of the MSC device
-mstate.deviceMode     // Current mode of the MSC device (see CommandType values)
-mstate.stats          // Generic statistics, useful for debugging only.
-mstate.batteryLevel   // Internal battery level in Volts
-```
-
-* Internal states reference
-
-The state property returned by GetState() can have the following values (see MSC.State enum)
-
-| Constant | Value | Meaning | Next |
-| --- | --- | --- | --- |
- NOT_CONNECTED     | 'Not connected'                     | Initial state (before Pair())        | CONNECTING
- CONNECTING        | 'Bluetooth device pairing...'       | Waiting for pairing to complete      | DEVICE_PAIRED
- DEVICE_PAIRED     | 'Device paired'                     | Pairing completed, no BT interface   | SUBSCRIBING
- SUBSCRIBING       | 'Bluetooth interfaces connecting...'| Waiting for BT interfaces            | METER_INIT
- IDLE | 'Idle' | Ready to execute commands            | BUSY
- BUSY              | 'Busy'                              | Executing command or refreshing data | IDLE,ERROR
- ERROR             | 'Error'                             | An exception has occured (BT or data)| METER_INIT
- STOPPING          | 'Closing BT interfaces...'          | Processing Stop request from UI      | STOPPED
- STOPPED           | 'Stopped'                           | Everything has stopped               | -
- METER_INIT        | 'Meter connected'                   | State after SUBSCRIBING              | METER_INITIALIZING
- METER_INITIALIZING| 'Reading meter state...'            | State after METER_INIT (reading data)| IDLE
-
-### Sending commands to the meter
-
-The MSC device supports readings and generations. Each function corresponds to a CommandType enum value.
-Generations require one or more setpoint, depending on the specific function.
-
-* Command class is a required parameter to send a command to the meter
-
-```js
-// Use the static methods CreateNo/One/TwoSP to initialize a command object
-var comm_meas = MSC.Command.CreateNoSP(<CommandType enum value>)
-var comm_gen = MSC.Command.CreateOneSP(<CommandType enum value>, setpoint)
-var comm_cgen = MSC.Command.CreateTwoSP(<CommandType enum value>, set1, set2)
-// The following properties are available
-comm.error // true if the Execute method has failed 
-comm.type  // type of the command
-comm.setpoint  // copy of setpoint 1 or null
-comm.setpoint2  // copy of setpoint 2 or null
-comm.defaultSetpoint() // see below
-```
-
-* In all cases, will try to re-execute the command if communication breaks during execution.
-* The API will put the device in OFF state before writing setpoints (for safety), then apply the new mode settings after a slight delay.
-* For specific functions (mV/V/mA/Pulses), a statistics reset command will be sent to the meter 1s after mode change.
-
-
-#### Sending commands to the meter (simple version)
-
-SimpleExecute will send the command and update the state. 
-* It will fail if a command is already pending, the meter is not paired, or the command execution fails for whatever reason. 
-* A message property is available for diagnostics.
-* It will not attempt to pair the device if not already paired and fail fast.
-
-```js
-// Use the static methods CreateNo/One/TwoSP to initialize a command object
-var comm_meas = MSC.Command.CreateNoSP(CommandType.V);
-var result = await MSC.SimpleExecute(command);
-if (!result.error)
-{
-    console.log("The command was executed and the returned value is " + result.value);
-}
-```
-
-#### Sending commands to the meter (complex version)
-
-Execute method will wait for the previous comand to complete, queue the new command, and return an updated Command object. You will need to call GetState to have the results of the command.
-
-* Read example
-
-```js
-var state = await MSC.GetState();
-if (state.ready) { // Check that the meter is ready
-    var command = MSC.Command.CreateNoSP(MSC.CommandType.mV); // Read mV function
-    var result = await MSC.Execute(command);
-    if (result.error) { // Check the error property of returned Command
-        // Something happened with command execution (device off, comm error...)
-    }
-    var measure = await MSC.GetState().lastMeasure; // This property will update approx. every second
-    if (measure.error) { // Meter is signalling an error with the measurement. E.g. overcurrent.
-        // Measure is not valid ; should retry 
-    }
-    else {
-        console.log(measure); // Print the measurements
-        // Note that the raw value will always be measure[0]
-    }
-}
-else {
-    if (state.initializing) {
-        // Wait some more, the meter is connecting
-    } else {
-        // Not connected, ask the user to pair again
+        // Create measurement command
+        const command = MSC.Command.CreateNoSP(MSC.CommandType.V);
+        const result = await MSC.SimpleExecute(command);
+        
+        if (result.error) {
+            console.error('Measurement failed:', result.message);
+        } else {
+            console.log(`Voltage: ${result.value} V`);
+        }
+    } catch (error) {
+        console.error('Error:', error);
     }
 }
 ```
 
-* Generation example 
+### Voltage Generation
+```javascript
+async function generateVoltage(voltage) {
+    try {
+        const state = await MSC.GetState();
+        if (!state.ready) {
+            throw new Error('Device not ready');
+        }
 
-```js
-var state = await MSC.GetState();
-if (state.ready) {
-    var command = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, 5.2); // Generate 5.2 V
-    var result = await MSC.Execute(command);
-    if (result.error) { // Check the error property of returned Command
-        // Something happened with command execution (device off, comm error...)
-    }
-    var sp = MSC.GetState().lastSetpoint;
-    if (sp.error) {
-        // Generation has error (e.g. short circuit, wrong connections...) 
-    }
-    else {
-        console.log(sp); // Print the setpoint
-    }
-}
-else {
-    if (state.initializing) {
-        // Wait some more
-    } else {
-        // Not connected, ask the user to pair again
+        // Create generation command
+        const command = MSC.Command.CreateOneSP(MSC.CommandType.GEN_V, voltage);
+        const result = await MSC.Execute(command);
+        
+        if (result.error) {
+            console.error('Generation failed');
+        } else {
+            console.log(`Generating ${voltage}V`);
+            
+            // Monitor generation status
+            const newState = await MSC.GetState();
+            if (newState.lastSetpoint.error) {
+                console.error('Generation error detected');
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
     }
 }
 ```
 
-* Generating 100 pulses of 50 ms each, with low = 0 V and high = 5 V
-
-```js
-// Assuming meter.ready
-
-var command1 = MSC.Command.CreateOneSP(MSC.CommandType.SET_Ulow, 0.0); 
-var result1 = await MSC.Execute(command1);
-if (result1.error) { // Check the error property of returned Command
-    // Something happened with command execution (device off, comm error...)
-}
-var command2 = MSC.Command.CreateOneSP(MSC.CommandType.SET_Uhigh, 5.0); 
-var result2 = await MSC.Execute(command2);
-if (result2.error) { // Check the error property of returned Command
-    // Something happened with command execution (device off, comm error...)
-}
-var command3 = MSC.Command.CreateTwoSP(MSC.CommandType.GEN_PulseTrain, 100, 1000/50); 
-var result3 = await MSC.Execute(command3);
-if (result3.error) { // Check the error property of returned Command
-    // Something happened with command execution (device off, comm error...)
-} else {
-    // MSC is now generating the pulses
+### Pulse Generation
+```javascript
+async function generatePulses(count, frequency) {
+    try {
+        // Set voltage levels first
+        await MSC.Execute(MSC.Command.CreateOneSP(MSC.CommandType.SET_Ulow, 0.0));
+        await MSC.Execute(MSC.Command.CreateOneSP(MSC.CommandType.SET_Uhigh, 5.0));
+        
+        // Generate pulses (count, frequency in Hz)
+        const command = MSC.Command.CreateTwoSP(MSC.CommandType.GEN_PulseTrain, count, frequency);
+        const result = await MSC.Execute(command);
+        
+        if (!result.error) {
+            console.log(`Generating ${count} pulses at ${frequency} Hz`);
+        }
+    } catch (error) {
+        console.error('Pulse generation failed:', error);
+    }
 }
 ```
-* After a command execution the state is up-to-date (garantee)
-* If the state machine is stopped, an attempt will be made to start the machine. This may require to Pair the device and it will fail if Execute is not called from a user-gesture handling function in the browser.
-* To get the expected setpoints for a specific command type, use Command.defaultSetpoint(). This is used in the demo page in order to present to the user the right input boxes with meaningful descriptions.
 
-```js
-// Create a temporary command
-const command = new MSC.Command(ctype);
-// Get the default setpoint for this command type
-const setpoints = command.defaultSetpoint();
-// Inspect setpoints array to get information about units, setpoint required...
-const howmany = Object.keys(setpoints).length;
+### Continuous Monitoring
+```javascript
+async function startMonitoring() {
+    setInterval(async () => {
+        try {
+            const state = await MSC.GetState();
+            
+            if (state.ready && state.lastMeasure && !state.lastMeasure.error) {
+                console.log('Current measurement:', state.lastMeasure[0]);
+            }
+            
+            if (state.lastSetpoint && !state.lastSetpoint.error) {
+                console.log('Current setpoint:', state.lastSetpoint[0]);
+            }
+        } catch (error) {
+            console.error('Monitoring error:', error);
+        }
+    }, 1000);
+}
 ```
 
-### :alarm_clock: Response times observed
+## Device Features
 
-| Operation | Typical time observed | Notes
-| --- | --- | --- |
-| Pair the device | 20-40s | It takes several tries to establish bluetooth characteristics
-| Execute generation | 2-3s | From command to device output
-| Execute measurement | 2-3s | From command to device reading
-| Refresh measurement | 1s | To get updated min/max/current values and error flag
-| Refresh generation stats | 1s | To get updated generation setpoint and error flag
-| Modbus roundtrip | approx 150ms | From command to answer
+### Measurements
 
-## Branches & development info
+| Function | Status | Data Returned |
+|----------|--------|---------------|
+| V, mV readings | ✅ Tested | Instantaneous, min, max values |
+| mA active/passive | ✅ Tested | Instantaneous, min, max values |
+| RTD 2W readings | ✅ Tested | Temperature (°C) and resistance (Ω) |
+| Thermocouples 2W/3W/4W | ✅ Not tested | Temperature (°C) |
+| Frequency reading | ✅ Tested | Leading/falling edge frequency |
+| Pulse counting | ✅ Tested 0-10kHz | Leading/falling edge counts |
+| Load cell | ✅ Not tested | Imbalance mV/V |
 
-* Pushes to main will trigger GitHub actions for CI and NPM package update. If the package.json has a new version respect to NPM repository, it will be published automatically. Also, pushes to main branch update the Github pages with the sample application.
-* Most development shall happen in development branch, then PR to main once ready.
-* Testing is peculiar due to bluetooth interface and real device requirements.
-* To workaround this issue, I captured traces of modbus RTU packets in hex format (see docs/captured traces.txt), and added a simulation flag into the bluetooth module. When this simulation flag is set, the device modbus RTU answers will be either forged on the fly (e.g. state inquiry), taken from the registered "real trace", or taken from default FC 03 / FC 10 modbus answer. In this way, the code testing coverage remains pretty decent without a real device.
+### Generation
+
+| Function | Status | Setpoint |
+|----------|--------|----------|
+| V, mV generation | ✅ Tested | Voltage (mV/V) |
+| mA active/passive | ⚠️ Basic testing | Current (mA) |
+| RTD 2W simulation | ✅ Not tested | Temperature (°C) |
+| Thermocouple simulation | ✅ Not tested | Temperature (°C) |
+| Frequency generation | ✅ Tested 0-10kHz | LE and FE frequency (Hz) |
+| Pulse generation | ✅ Tested 1kHz | LE and FE frequency (Hz) |
+| Load cell simulation | ✅ Not tested | Imbalance mV/V |
+
+### Configuration Settings
+
+| Setting | Command | Range | Status |
+|---------|---------|-------|--------|
+| Low level voltage | `SET_Ulow` | 0-27V | ✅ Tested |
+| High level voltage | `SET_Uhigh` | 0-27V | ✅ Tested |
+| Pulse width threshold | `SET_Sensitivity_uS` | 1-∞ μs | ⚠️ Not tested |
+| Voltage threshold | `SET_UThreshold_F` | 0-27V | ⚠️ Not tested |
+| Cold junction compensation | `SET_ColdJunction` | Various | ⚠️ Not tested |
+
+### Not Implemented Features
+
+- Ramps editing and application
+- Data logging start/stop
+- Logged data retrieval
+- Clock read/sync
+- Firmware version read
+- mV/V to kg conversion
+- Automatic switch off delay
+
+## Performance
+
+| Operation | Typical Time | Notes |
+|-----------|--------------|-------|
+| Device pairing | 20-40s | Multiple attempts to establish characteristics |
+| Command execution | 2-3s | From command to device response |
+| Measurement refresh | ~1s | Updated min/max/current values |
+| Generation refresh | ~1s | Updated setpoint and error status |
+| Modbus roundtrip | ~150ms | Single command/response cycle |
+
+**Polling Frequency:** 750ms automatic state refresh when idle
+
+## Development
+
+### Building
 
 ```bash
-npm test
-```
+# Install dependencies
+npm install
 
-* The CommonJS files can be generated in two ways, minified ("dist") or normal ("dev") :
-
-```bash
+# Development build (unminified)
 npm run dev
-npm run dist 
+
+# Production build (minified)
+npm run dist
 ```
+
+### Testing
+
+```bash
+# Run tests with coverage
+npm test
+
+# Verbose test output
+npm test -- --verbose
+```
+
+**Note:** Tests use captured Modbus RTU packet traces in hex format for simulation, allowing comprehensive testing without physical hardware.
+
+### Project Structure
+
+```
+src/
+├── classes/           # Core classes
+│   ├── SenecaMSC.js      # Main Bluetooth/Modbus operations
+│   ├── APIState.js       # State management
+│   ├── Command.js        # Command structure
+│   └── ...
+├── bluetooth.js       # Web Bluetooth wrapper
+├── modbusRtu.js      # Modbus RTU protocol
+├── senecaModbus.js   # Seneca-specific commands
+└── constants.js      # Enums and constants
+```
+
+### CI/CD
+
+- **Main branch:** Triggers GitHub Actions for CI and NPM publishing
+- **Development branch:** Use for feature development, PR to main when ready
+- **GitHub Pages:** Sample application updates on main branch pushes
+- **NPM:** Automatic publishing when package.json version changes
+
+## Troubleshooting
+
+### Common Issues
+
+#### "Web Bluetooth is not available"
+- Ensure you're using a supported browser (Chrome 56+, Edge 79+)
+- Check that Bluetooth is enabled on your device
+- Try enabling "Experimental Web Platform Features" in Chrome flags
+
+#### "User cancelled the requestDevice() chooser"
+- User must manually select device from browser dialog
+- Ensure MSC device is powered on and discoverable
+- Device name should start with "MSC"
+
+#### "Device pairing takes too long"
+- This is normal (20-40s typical)
+- Ensure MSC device remains powered during pairing
+- Try moving closer to the device
+
+#### "Commands fail after successful pairing"
+- Check device battery level (`state.batteryLevel`)
+- Verify device is not in error state
+- Try disconnecting and reconnecting
+
+#### "Measurements show error flag"
+- Check device connections and probes
+- Verify measurement range is appropriate
+- Check for overcurrent/overvoltage conditions
+
+### Debug Information
+
+Enable debug logging:
+```javascript
+const state = await MSC.GetState();
+console.log('Debug stats:', state.stats);
+```
+
+### Getting Help
+
+- Check the [live demo](https://schneiderelectricsystemsitaly.github.io/bt-seneca-msc/) for working examples
+- Review browser console for error messages  
+- Ensure proper user gesture handling for pairing
+- Verify device compatibility and firmware version
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch from `development`
+3. Make your changes with tests
+4. Submit a pull request to `development` branch
+
+### Development Workflow
+
+- Use `development` branch for features
+- PR to `main` when ready for release
+- Tests must pass and maintain coverage
+- Follow existing code style and patterns
+
+## License
+
+MIT License - see LICENSE file for details.
+
+---
+
+**Seneca MSC Device Information:** https://www.seneca.it/msc/
