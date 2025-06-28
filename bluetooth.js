@@ -130,7 +130,7 @@ async function stateMachine() {
 		break;
 	case State.SUBSCRIBING: // waiting for Bluetooth interfaces
 		nextAction = undefined;
-		if (btState.state_cpt > (TIMEOUT_MS / DELAY_MS)) {
+		if (btState.state_cpt > Math.floor(TIMEOUT_MS / DELAY_MS)) {
 			// Timeout, try to resubscribe
 			log.warn("Timeout in SUBSCRIBING");
 			btState.state = State.DEVICE_PAIRED;
@@ -141,7 +141,7 @@ async function stateMachine() {
 		nextAction = meterInit;
 		break;
 	case State.METER_INITIALIZING: // reading the meter status
-		if (btState.state_cpt > (TIMEOUT_MS / DELAY_MS)) {
+		if (btState.state_cpt > Math.floor(TIMEOUT_MS / DELAY_MS)) {
 			log.warn("Timeout in METER_INITIALIZING");
 			// Timeout, try to resubscribe
 			if (simulation) {
@@ -164,7 +164,7 @@ async function stateMachine() {
 		nextAction = disconnect;
 		break;
 	case State.BUSY: // while a command in going on
-		if (btState.state_cpt > (TIMEOUT_MS / DELAY_MS)) {
+		if (btState.state_cpt > Math.floor(TIMEOUT_MS / DELAY_MS)) {
 			log.warn("Timeout in BUSY");
 			// Timeout, try to resubscribe
 			if (simulation) {
@@ -421,7 +421,15 @@ function handleNotifications(event) {
 	if (value != null) {
 		log.debug("<< " + utils.buf2hex(value.buffer));
 		if (btState.response != null) {
-			btState.response = arrayBufferConcat(btState.response, value.buffer);
+			// Prevent memory leak by limiting maximum response buffer size
+			const MAX_RESPONSE_SIZE = 1024; // 1KB limit for modbus responses
+			const newSize = btState.response.byteLength + value.buffer.byteLength;
+			if (newSize > MAX_RESPONSE_SIZE) {
+				log.warn("Response buffer too large, resetting");
+				btState.response = value.buffer.slice();
+			} else {
+				btState.response = arrayBufferConcat(btState.response, value.buffer);
+			}
 		} else {
 			btState.response = value.buffer.slice();
 		}
