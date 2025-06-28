@@ -12,7 +12,8 @@ class ModbusError extends Error {
      * @param {String} message message
      * @param {number} fc function code
      */
-	contructor(message, fc) {
+	constructor(message, fc) {
+		super(message);
 		this.message = message;
 		this.fc = fc;
 	}

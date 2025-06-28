@@ -190,7 +190,14 @@ async function Execute(command) {
 	// Start the regular state machine
 	if (!btState.started) {
 		btState.state = State.NOT_CONNECTED;
-		await bluetooth.stateMachine();
+		try {
+			await bluetooth.stateMachine();
+		} catch (err) {
+			log.error("Failed to start state machine:", err);
+			command.error = true;
+			command.pending = false;
+			return command;
+		}
 	}
 
 	// Wait for completion of the command, or halt of the state machine
@@ -213,7 +220,10 @@ async function Pair(forceSelection = false) {
 
 	if (!btState.started) {
 		btState.state = State.NOT_CONNECTED;
-		bluetooth.stateMachine(); // Start it
+		bluetooth.stateMachine().catch((err) => {
+			log.error("State machine failed during pairing:", err);
+			btState.state = State.ERROR;
+		}); // Start it
 	}
 	else if (btState.state == State.ERROR) {
 		btState.state = State.NOT_CONNECTED; // Try to restart

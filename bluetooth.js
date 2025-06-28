@@ -198,7 +198,10 @@ async function stateMachine() {
 		}
 	}
 	if (btState.state != State.STOPPED) {
-		utils.sleep(DELAY_MS).then(() => stateMachine()); // Recheck status in DELAY_MS ms
+		utils.sleep(DELAY_MS).then(() => stateMachine()).catch((err) => {
+			log.error("State machine error:", err);
+			btState.state = State.ERROR;
+		}); // Recheck status in DELAY_MS ms
 	}
 	else {
 		log.debug("\tTerminating State machine");
