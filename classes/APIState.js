@@ -31,6 +31,9 @@ class APIState {
 		// emulated continuity checker
 		this.continuity = false;
 
+		// battery refresh counter for regular battery status updates
+		this.batteryRefreshCounter = 0;
+
 		// general statistics for debugging
 		this.stats = {
 			"requests": 0,

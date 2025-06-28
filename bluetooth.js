@@ -638,6 +638,19 @@ async function refresh() {
 				btState.lastMeasure = meas;
 			}
 		}
+
+		// Refresh battery status regularly (every 10 refresh cycles to avoid excessive communication)
+		if (!btState.batteryRefreshCounter) {
+			btState.batteryRefreshCounter = 0;
+		}
+		btState.batteryRefreshCounter++;
+		
+		if (btState.batteryRefreshCounter >= 10) {
+			btState.meter.battery = await senecaMSC.getBatteryVoltage();
+			log.debug("\t\tBattery refreshed: " + btState.meter.battery + "V");
+			btState.batteryRefreshCounter = 0;
+		}
+
 		log.debug("\t\tFinished refreshing current state");
 		btState.state = State.IDLE;
 	}
