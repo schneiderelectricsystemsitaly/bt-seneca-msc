@@ -7,7 +7,7 @@
       "declaration": true,
       "outDir": "js",
       "esModuleInterop": true,
-      "strictNullChecks": false,
+      "strictNullChecks": false
     },
     "include": [
       "ts/**/*"

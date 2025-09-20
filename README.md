@@ -2,7 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/bt-seneca-msc.svg)](https://badge.fury.io/js/bt-seneca-msc)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://github.com/schneiderelectricsystemsitaly/bt-seneca-msc/actions/workflows/ci.yml/badge.svg)](https://github.com/schneiderelectricsystemsitaly/bt-seneca-msc/actions)
+[![Build Status](https://github.com/schneiderelectricsystemsitaly/bt-seneca-msc/actions/workflows/publish.yml/badge.svg)](https://github.com/schneiderelectricsystemsitaly/bt-seneca-msc/actions)
 [![Coverage Status](https://coveralls.io/repos/github/schneiderelectricsystemsitaly/bt-seneca-msc/badge.svg?branch=main)](https://coveralls.io/github/schneiderelectricsystemsitaly/bt-seneca-msc?branch=main)
 
 > A pure JavaScript API for the Seneca Multi Smart Calibrator (MSC) device, using Web Bluetooth from modern browsers.
