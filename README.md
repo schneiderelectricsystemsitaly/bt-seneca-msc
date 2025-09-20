@@ -2,10 +2,14 @@
 
 [![npm version](https://badge.fury.io/js/bt-seneca-msc.svg)](https://badge.fury.io/js/bt-seneca-msc)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build Status](https://github.com/schneiderelectricsystemsitaly/bt-seneca-msc/actions/workflows/ci.yml/badge.svg)](https://github.com/schneiderelectricsystemsitaly/bt-seneca-msc/actions)
+[![Coverage Status](https://coveralls.io/repos/github/schneiderelectricsystemsitaly/bt-seneca-msc/badge.svg?branch=main)](https://coveralls.io/github/schneiderelectricsystemsitaly/bt-seneca-msc?branch=main)
 
-A pure JavaScript API for the Seneca Multi Smart Calibrator (MSC) device, using Web Bluetooth from modern browsers.
+> A pure JavaScript API for the Seneca Multi Smart Calibrator (MSC) device, using Web Bluetooth from modern browsers.
 
-**🚀 [Live Demo](https://schneiderelectricsystemsitaly.github.io/bt-seneca-msc/)**
+**🚀 [Live Demo](https://schneiderelectricsystemsitaly.github.io/bt-seneca-msc/)** | **📖 [Documentation](#api-reference)** | **🛠️ [Getting Started](#quick-start)**
+
+---
 
 ## Table of Contents
 
@@ -25,51 +29,82 @@ A pure JavaScript API for the Seneca Multi Smart Calibrator (MSC) device, using 
 
 This package provides a complete JavaScript interface for the Seneca Multi Smart Calibrator device via Web Bluetooth. It implements Modbus RTU FC3/FC16 functions specifically designed to run in pure browser environments without Node.js dependencies.
 
-**Key Features:**
-- Pure browser implementation using Web Bluetooth API
-- Modbus RTU protocol over Bluetooth
-- Real-time measurement and generation capabilities
-- Automatic device state management
-- Comprehensive error handling and recovery
+### ✨ Key Features
 
-**Tested with:**
-- Seneca MSC device firmware 1.0.44
-- Chrome and Edge browsers on Windows PC
-- Android Samsung S10 phone
+- 🌐 **Pure browser implementation** using Web Bluetooth API
+- 🔗 **Modbus RTU protocol** over Bluetooth
+- ⚡ **Real-time measurement and generation** capabilities
+- 🔄 **Automatic device state management**
+- 🛡️ **Comprehensive error handling** and recovery
+- 📱 **Cross-platform support** (Desktop & Mobile browsers)
 
-## Prerequisites
+### 🧪 Tested Environments
+
+| Platform | Browser | Device | Status |
+|----------|---------|---------|---------|
+| Windows PC | Chrome/Edge | MSC firmware 1.0.44 | ✅ Tested |
+| Android | Chrome | Samsung S10 | ✅ Tested |
+| iOS | Safari | - | ❌ Not supported |
+
+## 📋 Prerequisites
 
 ### Browser Requirements
-- **Chrome 56+** or **Edge 79+** with Web Bluetooth support
-- **Android Chrome 56+** on supported devices
-- **Experimental Web Platform Features** may need to be enabled
+
+| Browser | Minimum Version | Notes |
+|---------|----------------|-------|
+| Chrome | 56+ | ✅ Full support |
+| Edge | 79+ | ✅ Full support |
+| Firefox | - | ❌ No Web Bluetooth support |
+| Safari | - | ❌ No Web Bluetooth support |
+
+> **Note:** "Experimental Web Platform Features" may need to be enabled in Chrome flags
 
 ### Hardware Requirements
-- Seneca Multi Smart Calibrator device ([MSC series](https://www.seneca.it/msc/))
-- Bluetooth-enabled device
-- User gesture required for initial pairing (browser security requirement)
 
-### Browser Compatibility Check
+- ✅ Seneca Multi Smart Calibrator device ([MSC series](https://www.seneca.it/msc/))
+- ✅ Bluetooth-enabled device
+- ⚠️ User gesture required for initial pairing (browser security requirement)
+
+### Quick Compatibility Check
+
 ```javascript
 if (!navigator.bluetooth) {
     console.error('Web Bluetooth is not supported in this browser');
+} else {
+    console.log('Web Bluetooth is available');
 }
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ### 1. Include the Library
-```html
-<!-- CDN -->
-<script src="https://cdn.jsdelivr.net/npm/bt-seneca-msc@latest/dist/bt-seneca-msc.min.js"></script>
 
-<!-- Or local -->
-<script src="path/to/bt-seneca-msc.min.js"></script>
+<details>
+<summary><strong>📦 CDN (Recommended)</strong></summary>
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/bt-seneca-msc@latest/dist/bt-seneca-msc.min.js"></script>
+```
+</details>
+
+<details>
+<summary><strong>📥 NPM</strong></summary>
+
+```bash
+npm install bt-seneca-msc
 ```
 
-### 2. Pair and Connect
 ```javascript
-// Must be called from a user gesture (button click, etc.)
+import MSC from 'bt-seneca-msc';
+// or
+const MSC = require('bt-seneca-msc');
+```
+</details>
+
+### 2. Pair and Connect
+
+```javascript
+// ⚠️ Must be called from a user gesture (button click, etc.)
 document.getElementById('connectBtn').addEventListener('click', async () => {
     try {
         const paired = await MSC.Pair(true);
@@ -83,13 +118,14 @@ document.getElementById('connectBtn').addEventListener('click', async () => {
 ```
 
 ### 3. Take a Measurement
+
 ```javascript
 async function measureVoltage() {
     const state = await MSC.GetState();
     if (state.ready) {
         const command = MSC.Command.CreateNoSP(MSC.CommandType.V);
         const result = await MSC.SimpleExecute(command);
-        
+
         if (!result.error) {
             console.log(`Voltage: ${result.value} V`);
         }
@@ -97,9 +133,11 @@ async function measureVoltage() {
 }
 ```
 
-## Installation
+## 📦 Installation
 
-### NPM (Node.js/Webpack/Bundlers)
+<details>
+<summary><strong>NPM (Node.js/Webpack/Bundlers)</strong></summary>
+
 ```bash
 npm install bt-seneca-msc
 ```
@@ -109,21 +147,31 @@ import MSC from 'bt-seneca-msc';
 // or
 const MSC = require('bt-seneca-msc');
 ```
+</details>
 
-### CDN (Browser)
+<details>
+<summary><strong>CDN (Browser)</strong></summary>
+
 ```html
 <script src="https://cdn.jsdelivr.net/npm/bt-seneca-msc@latest/dist/bt-seneca-msc.min.js"></script>
 ```
+</details>
 
-### LibMan (ASP.NET Core)
+<details>
+<summary><strong>LibMan (ASP.NET Core)</strong></summary>
+
 ```powershell
 libman install bt-seneca-msc --provider jsdelivr
 ```
+</details>
 
-### Manual Download
+<details>
+<summary><strong>Manual Download</strong></summary>
+
 Download from the [releases page](https://github.com/schneiderelectricsystemsitaly/bt-seneca-msc/releases) and include the `dist/bt-seneca-msc.min.js` file.
+</details>
 
-## API Reference
+## 📖 API Reference
 
 ### Core Methods
 
@@ -210,7 +258,7 @@ state.stats           // object: Debug statistics
 | `STOPPING` | Processing stop request | `STOPPED` |
 | `STOPPED` | Everything stopped | - |
 
-## Usage Examples
+## 💡 Usage Examples
 
 ### Basic Voltage Measurement
 ```javascript
@@ -309,7 +357,7 @@ async function startMonitoring() {
 }
 ```
 
-## Device Features
+## 🔧 Device Features
 
 ### Measurements
 
