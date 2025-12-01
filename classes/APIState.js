@@ -44,7 +44,7 @@ class APIState {
 			"subcribes": 0,
 			"commands": 0,
 			"responseTime": 0.0,
-			"lastResponseTime": 0.0,
+			"lastResponseTime": "",
 			"last_connect": new Date(2020, 1, 1).toISOString()
 		};
 

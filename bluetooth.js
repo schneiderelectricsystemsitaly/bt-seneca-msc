@@ -52,7 +52,7 @@ async function SendAndResponse(command) {
 	else {
 		await btState.charWrite.writeValueWithoutResponse(command);
 		while (btState.state == State.METER_INITIALIZING ||
-            btState.state == State.BUSY) {
+			btState.state == State.BUSY) {
 			if (btState.response != null) break;
 			await new Promise(resolve => setTimeout(resolve, 35));
 		}
@@ -111,79 +111,79 @@ async function stateMachine() {
 
 	log.debug("State:" + btState.state);
 	switch (btState.state) {
-	case State.NOT_CONNECTED: // initial state on Start()
-		if (simulation) {
-			nextAction = fakePairDevice;
-		} else {
-			nextAction = btPairDevice;
-		}
-		break;
-	case State.CONNECTING: // waiting for connection to complete
-		nextAction = undefined;
-		break;
-	case State.DEVICE_PAIRED: // connection complete, acquire meter state
-		if (simulation) {
-			nextAction = fakeSubscribe;
-		} else {
-			nextAction = btSubscribe;
-		}
-		break;
-	case State.SUBSCRIBING: // waiting for Bluetooth interfaces
-		nextAction = undefined;
-		if (btState.state_cpt > Math.floor(TIMEOUT_MS / DELAY_MS)) {
-			// Timeout, try to resubscribe
-			log.warn("Timeout in SUBSCRIBING");
-			btState.state = State.DEVICE_PAIRED;
-			btState.state_cpt = 0;
-		}
-		break;
-	case State.METER_INIT: // ready to communicate, acquire meter status
-		nextAction = meterInit;
-		break;
-	case State.METER_INITIALIZING: // reading the meter status
-		if (btState.state_cpt > Math.floor(TIMEOUT_MS / DELAY_MS)) {
-			log.warn("Timeout in METER_INITIALIZING");
-			// Timeout, try to resubscribe
+		case State.NOT_CONNECTED: // initial state on Start()
+			if (simulation) {
+				nextAction = fakePairDevice;
+			} else {
+				nextAction = btPairDevice;
+			}
+			break;
+		case State.CONNECTING: // waiting for connection to complete
+			nextAction = undefined;
+			break;
+		case State.DEVICE_PAIRED: // connection complete, acquire meter state
 			if (simulation) {
 				nextAction = fakeSubscribe;
 			} else {
 				nextAction = btSubscribe;
 			}
-			btState.state_cpt = 0;
-		}
-		nextAction = undefined;
-		break;
-	case State.IDLE: // ready to process commands from API
-		if (btState.command != null)
-			nextAction = processCommand;
-		else {
-			nextAction = refresh;
-		}
-		break;
-	case State.ERROR: // anytime an error happens
-		nextAction = disconnect;
-		break;
-	case State.BUSY: // while a command in going on
-		if (btState.state_cpt > Math.floor(TIMEOUT_MS / DELAY_MS)) {
-			log.warn("Timeout in BUSY");
-			// Timeout, try to resubscribe
-			if (simulation) {
-				nextAction = fakeSubscribe;
-			} else {
-				nextAction = btSubscribe;
+			break;
+		case State.SUBSCRIBING: // waiting for Bluetooth interfaces
+			nextAction = undefined;
+			if (btState.state_cpt > Math.floor(TIMEOUT_MS / DELAY_MS)) {
+				// Timeout, try to resubscribe
+				log.warn("Timeout in SUBSCRIBING");
+				btState.state = State.DEVICE_PAIRED;
+				btState.state_cpt = 0;
 			}
-			btState.state_cpt = 0;
-		}
-		nextAction = undefined;
-		break;
-	case State.STOPPING:
-		nextAction = disconnect;
-		break;
-	case State.STOPPED: // after a disconnector or Stop() request, stops the state machine.
-		nextAction = undefined;
-		break;
-	default:
-		break;
+			break;
+		case State.METER_INIT: // ready to communicate, acquire meter status
+			nextAction = meterInit;
+			break;
+		case State.METER_INITIALIZING: // reading the meter status
+			if (btState.state_cpt > Math.floor(TIMEOUT_MS / DELAY_MS)) {
+				log.warn("Timeout in METER_INITIALIZING");
+				// Timeout, try to resubscribe
+				if (simulation) {
+					nextAction = fakeSubscribe;
+				} else {
+					nextAction = btSubscribe;
+				}
+				btState.state_cpt = 0;
+			}
+			nextAction = undefined;
+			break;
+		case State.IDLE: // ready to process commands from API
+			if (btState.command != null)
+				nextAction = processCommand;
+			else {
+				nextAction = refresh;
+			}
+			break;
+		case State.ERROR: // anytime an error happens
+			nextAction = disconnect;
+			break;
+		case State.BUSY: // while a command in going on
+			if (btState.state_cpt > Math.floor(TIMEOUT_MS / DELAY_MS)) {
+				log.warn("Timeout in BUSY");
+				// Timeout, try to resubscribe
+				if (simulation) {
+					nextAction = fakeSubscribe;
+				} else {
+					nextAction = btSubscribe;
+				}
+				btState.state_cpt = 0;
+			}
+			nextAction = undefined;
+			break;
+		case State.STOPPING:
+			nextAction = disconnect;
+			break;
+		case State.STOPPED: // after a disconnector or Stop() request, stops the state machine.
+			nextAction = undefined;
+			break;
+		default:
+			break;
 	}
 
 	btState.prev_state = btState.state;
@@ -240,7 +240,7 @@ async function processCommand() {
 		}
 
 		if (!utils.isSetting(command.type) &&
-            utils.isValid(command.type) && command.type != CommandType.OFF)  // IF this is a setting, we're done.
+			utils.isValid(command.type) && command.type != CommandType.OFF)  // IF this is a setting, we're done.
 		{
 			// Now write the mode set
 			result = await senecaMSC.changeMode(command.type);
@@ -456,7 +456,7 @@ async function btPairDevice() {
 
 		// Do we already have permission?
 		if (typeof (navigator.bluetooth?.getDevices) == "function"
-            && !forceSelection) {
+			&& !forceSelection) {
 			const availableDevices = await navigator.bluetooth.getDevices();
 			availableDevices.forEach(function (dev, index) {
 				log.debug("Found authorized device :" + dev.name);
@@ -644,7 +644,7 @@ async function refresh() {
 			btState.batteryRefreshCounter = 0;
 		}
 		btState.batteryRefreshCounter++;
-		
+
 		if (btState.batteryRefreshCounter >= 10) {
 			btState.meter.battery = await senecaMSC.getBatteryVoltage();
 			log.debug("\t\tBattery refreshed: " + btState.meter.battery + "V");
