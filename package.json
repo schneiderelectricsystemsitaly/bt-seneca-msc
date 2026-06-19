@@ -18,7 +18,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+httnps://github.com/schneiderelectricsystemsitaly/bt-seneca-msc.git"
+    "url": "git+https://github.com/schneiderelectricsystemsitaly/bt-seneca-msc.git"
   },
   "dependencies": {
     "loglevel": "^1.9.2"
