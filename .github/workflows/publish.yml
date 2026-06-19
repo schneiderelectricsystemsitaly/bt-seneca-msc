@@ -25,4 +25,11 @@ jobs:
     - run: npm run dev  # build the CommonJS non-minified version
     - run: npm test     # run tests
     - name: Publish to npm
-      run: npm publish --provenance --access public
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        EXISTS=$(npm view bt-seneca-msc@$VERSION version 2>/dev/null || echo "")
+        if [ -z "$EXISTS" ]; then
+          npm publish --provenance --access public
+        else
+          echo "Version $VERSION already published, skipping."
+        fi
