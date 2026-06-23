@@ -1,19 +1,21 @@
 CodeQL Analysis Report - bt-seneca-msc
-==================================================
+============================================================
 Run date: 2026-06-23
+Query suite: security-and-quality
 Language: javascript-typescript
-Total findings: 0
-Files analyzed: 25
+Total rules evaluated: 200
+Total findings: 40
+Actionable findings (excluding generated dist/): 24
 
 FILES ANALYZED
-------------------------------
-  .eslintrc.json
+----------------------------------------
   .github/workflows/publish.yml
-  .eslintrc.js
   .github/workflows/codeql.yml
+  .eslintrc.js
+  .eslintrc.json
   bluetooth.js
-  classes/APIState.js
   classes/Command.js
+  classes/APIState.js
   classes/CommandResult.js
   classes/MeterState.js
   classes/SenecaMSC.js
@@ -25,106 +27,111 @@ FILES ANALYZED
   meterPublicAPI.js
   modbusRtu.js
   modbusTestData.js
-  package.json
   senecaModbus.js
+  package.json
   tests/Execute.test.js
   tests/fakeBluetooth.test.js
   tests/meterApi.test.js
   tsconfig.json
   utils.js
 
-RULES EVALUATED (86 total)
-------------------------------
-  ERROR (38):
-    js/bad-code-sanitization: Improper code sanitization
-    js/build-artifact-leak: Storage of sensitive information in build artifact
-    js/clear-text-logging: Clear-text logging of sensitive information
-    js/clear-text-storage-of-sensitive-data: Clear text storage of sensitive information
-    js/client-side-unvalidated-url-redirection: Client-side URL redirect
-    js/code-injection: Code injection
-    js/command-line-injection: Uncontrolled command line
-    js/cors-misconfiguration-for-credentials: CORS misconfiguration for credentials transfer
-    js/cross-window-information-leak: Cross-window communication with unrestricted target origin
-    js/disabling-certificate-validation: Disabling certificate validation
-    js/disabling-electron-websecurity: Disabling Electron webSecurity
-    js/enabling-electron-insecure-content: Enabling Electron allowRunningInsecureContent
-    js/functionality-from-untrusted-domain: Untrusted domain used in script or other content
-    js/host-header-forgery-in-email-generation: Host header poisoning in email generation
-    js/html-constructed-from-input: Unsafe HTML constructed from library input
-    js/incorrect-suffix-check: Incorrect suffix check
-    js/insecure-download: Download of sensitive file through insecure connection
-    js/insecure-helmet-configuration: Insecure configuration of Helmet security middleware
-    js/missing-token-validation: Missing CSRF middleware
-    js/path-injection: Uncontrolled data used in path expression
-    js/prototype-pollution: Prototype-polluting merge call
-    js/redos: Inefficient regular expression
-    js/reflected-xss: Reflected cross-site scripting
-    js/regex-injection: Regular expression injection
-    js/request-forgery: Server-side request forgery
-    js/second-order-command-line-injection: Second order command injection
-    js/shell-command-constructed-from-input: Unsafe shell command constructed from library input
-    js/sql-injection: Database query built from user-controlled sources
-    js/stored-xss: Stored cross-site scripting
-    js/template-object-injection: Template Object Injection
-    js/type-confusion-through-parameter-tampering: Type confusion through parameter tampering
-    js/unnecessary-use-of-cat: Unnecessary use of `cat` process
-    js/unsafe-dynamic-method-access: Unsafe dynamic method access
-    js/useless-regexp-character-escape: Useless regular-expression character escape
-    js/xpath-injection: XPath injection
-    js/xss: Client-side cross-site scripting
-    js/xxe: XML external entity expansion
-    js/zipslip: Arbitrary file access during archive extraction ("Zip Slip")
-  WARNING (46):
-    js/angular/disabling-sce: Disabling SCE
-    js/angular/double-compilation: Double compilation
-    js/angular/insecure-url-whitelist: Insecure URL whitelist
-    js/bad-tag-filter: Bad HTML filtering regexp
-    js/biased-cryptographic-random: Creating biased random numbers from a cryptographically secure source
-    js/case-sensitive-middleware-path: Case-sensitive middleware path
-    js/clear-text-cookie: Clear text transmission of sensitive cookie
-    js/client-exposed-cookie: Sensitive server cookie exposed to the client
-    js/cors-permissive-configuration: Permissive CORS configuration
-    js/double-escaping: Double escaping or unescaping
-    js/exposure-of-private-files: Exposure of private files
-    js/functionality-from-untrusted-source: Inclusion of functionality from an untrusted source
-    js/identity-replacement: Replacement of a substring with itself
-    js/incomplete-hostname-regexp: Incomplete regular expression for hostnames
-    js/incomplete-html-attribute-sanitization: Incomplete HTML attribute sanitization
-    js/incomplete-multi-character-sanitization: Incomplete multi-character sanitization
-    js/incomplete-sanitization: Incomplete string escaping or encoding
-    js/incomplete-url-scheme-check: Incomplete URL scheme check
-    js/incomplete-url-substring-sanitization: Incomplete URL substring sanitization
-    js/insecure-dependency: Dependency download using unencrypted communication channel
-    js/insecure-randomness: Insecure randomness
-    js/insufficient-key-size: Use of a weak cryptographic key
-    js/insufficient-password-hash: Use of password hash with insufficient computational effort
-    js/jwt-missing-verification: JWT missing secret or public key verification
-    js/loop-bound-injection: Loop bound injection
-    js/missing-rate-limiting: Missing rate limiting
-    js/overly-large-range: Overly permissive regular expression range
-    js/polynomial-redos: Polynomial regular expression used on uncontrolled data
-    js/prototype-polluting-assignment: Prototype-polluting assignment
-    js/prototype-pollution-utility: Prototype-polluting function
-    js/resource-exhaustion: Resource exhaustion
-    js/resource-exhaustion-from-deep-object-traversal: Resources exhaustion from deep object traversal
-    js/sensitive-get-query: Sensitive data read from GET request
-    js/server-crash: Server crash
-    js/server-side-unvalidated-url-redirection: Server-side URL redirect
-    js/shell-command-injection-from-environment: Shell command built from environment values
-    js/stack-trace-exposure: Information exposure through a stack trace
-    js/tainted-format-string: Use of externally-controlled format string
-    js/unsafe-deserialization: Deserialization of user-controlled data
-    js/unsafe-html-expansion: Unsafe expansion of self-closing HTML tag
-    js/unsafe-jquery-plugin: Unsafe jQuery plugin
-    js/unvalidated-dynamic-method-call: Unvalidated dynamic method call
-    js/weak-cryptographic-algorithm: Use of a broken or weak cryptographic algorithm
-    js/xml-bomb: XML internal entity expansion
-    js/xss-through-dom: DOM text reinterpreted as HTML
-    js/xss-through-exception: Exception text reinterpreted as HTML
-  NOTE (2):
-    js/summary/lines-of-code: Total lines of JavaScript and TypeScript code in the database
-    js/summary/lines-of-user-code: Total lines of user written JavaScript and TypeScript code in the database
+ALL FINDINGS (including dist/)
+----------------------------------------
+[14] js/unused-local-variable (NOTE): Unused variable, import, function or class
+  classes/SenecaMSC.js:18 - Unused variable SET_POWER_OFF.
+  index.html:183 - Unused variable stop.
+  meterApi.js:5 - Unused variable APIState.
+  tests/Execute.test.js:1 - Unused variable MeterState.
+  tests/Execute.test.js:4 - Unused variable log.
+  tests/Execute.test.js:18 - Unused variable CommandType.
+  tests/fakeBluetooth.test.js:4 - Unused variable log.
+  tests/fakeBluetooth.test.js:18 - Unused variable CommandType.
+  senecaModbus.js:8 - Unused variable Command.
+  dist/bt-seneca-msc.js:1 - Unused variable module.
+  dist/bt-seneca-msc.js:1 - Unused variable exports.
+  dist/bt-seneca-msc.js:896 - Unused variable SET_POWER_OFF.
+  dist/bt-seneca-msc.js:1276 - Unused variable APIState.
+  dist/bt-seneca-msc.js:4800 - Unused variable Command.
 
-FINDINGS
-------------------------------
-  No findings. All 86 rules passed.
+[12] js/useless-assignment-to-local (WARNING): Useless assignment to local variable
+  bluetooth.js:148 - The value assigned to nextAction here is unused.
+  bluetooth.js:150 - The value assigned to nextAction here is unused.
+  bluetooth.js:171 - The value assigned to nextAction here is unused.
+  bluetooth.js:173 - The value assigned to nextAction here is unused.
+  bluetooth.js:218 - The initial value of result is unused, since it is always overwritten.
+  bluetooth.js:594 - The value assigned to server here is unused.
+  dist/bt-seneca-msc.js:149 - The value assigned to nextAction here is unused.
+  dist/bt-seneca-msc.js:151 - The value assigned to nextAction here is unused.
+  dist/bt-seneca-msc.js:172 - The value assigned to nextAction here is unused.
+  dist/bt-seneca-msc.js:174 - The value assigned to nextAction here is unused.
+  dist/bt-seneca-msc.js:219 - The initial value of result is unused, since it is always overwritten.
+  dist/bt-seneca-msc.js:595 - The value assigned to server here is unused.
+
+[4] js/unneeded-defensive-code (NOTE): Unneeded defensive code
+  meterPublicAPI.js:131 - This guard always evaluates to true.
+  meterPublicAPI.js:204 - This guard always evaluates to true.
+  dist/bt-seneca-msc.js:1430 - This guard always evaluates to true.
+  dist/bt-seneca-msc.js:1503 - This guard always evaluates to true.
+
+[3] js/missing-variable-declaration (WARNING): Missing variable declaration
+  index.html:292 - Variable x is used like a local variable, but is missing a declaration.
+  tests/Execute.test.js:46 - Variable ctype is used like a local variable, but is missing a declaration.
+  tests/Execute.test.js:71 - Variable ctype is used like a local variable, but is missing a declaration.
+
+[2] js/unreachable-statement (WARNING): Unreachable statement
+  senecaModbus.js:545 - This statement is unreachable.
+  dist/bt-seneca-msc.js:5337 - This statement is unreachable.
+
+[2] js/assignment-to-constant (ERROR): Assignment to constant
+  modbusTestData.js:2607 - Assignment to variable testTraces, which is [declared](1) constant.
+  dist/bt-seneca-msc.js:4428 - Assignment to variable testTraces, which is [declared](1) constant.
+
+[2] js/implicit-operand-conversion (WARNING): Implicit operand conversion
+  senecaModbus.js:388 - This expression will be implicitly converted from undefined to number.
+  dist/bt-seneca-msc.js:5180 - This expression will be implicitly converted from undefined to number.
+
+[1] js/automatic-semicolon-insertion (NOTE): Semicolon insertion
+  index.html:167 - Avoid automated semicolon insertion (92% of all statements in [the enclosing script](1) have an explicit semicolon).
+
+ACTIONABLE FINDINGS (source files only, excluding dist/)
+----------------------------------------
+[1] js/assignment-to-constant (ERROR): Assignment to constant
+  modbusTestData.js:2607 - Assignment to variable testTraces, which is [declared](1) constant.
+
+[6] js/useless-assignment-to-local (WARNING): Useless assignment to local variable
+  bluetooth.js:148 - The value assigned to nextAction here is unused.
+  bluetooth.js:150 - The value assigned to nextAction here is unused.
+  bluetooth.js:171 - The value assigned to nextAction here is unused.
+  bluetooth.js:173 - The value assigned to nextAction here is unused.
+  bluetooth.js:218 - The initial value of result is unused, since it is always overwritten.
+  bluetooth.js:594 - The value assigned to server here is unused.
+
+[3] js/missing-variable-declaration (WARNING): Missing variable declaration
+  index.html:292 - Variable x is used like a local variable, but is missing a declaration.
+  tests/Execute.test.js:46 - Variable ctype is used like a local variable, but is missing a declaration.
+  tests/Execute.test.js:71 - Variable ctype is used like a local variable, but is missing a declaration.
+
+[1] js/unreachable-statement (WARNING): Unreachable statement
+  senecaModbus.js:545 - This statement is unreachable.
+
+[1] js/implicit-operand-conversion (WARNING): Implicit operand conversion
+  senecaModbus.js:388 - This expression will be implicitly converted from undefined to number.
+
+[9] js/unused-local-variable (NOTE): Unused variable, import, function or class
+  classes/SenecaMSC.js:18 - Unused variable SET_POWER_OFF.
+  index.html:183 - Unused variable stop.
+  meterApi.js:5 - Unused variable APIState.
+  tests/Execute.test.js:1 - Unused variable MeterState.
+  tests/Execute.test.js:4 - Unused variable log.
+  tests/Execute.test.js:18 - Unused variable CommandType.
+  tests/fakeBluetooth.test.js:4 - Unused variable log.
+  tests/fakeBluetooth.test.js:18 - Unused variable CommandType.
+  senecaModbus.js:8 - Unused variable Command.
+
+[2] js/unneeded-defensive-code (NOTE): Unneeded defensive code
+  meterPublicAPI.js:131 - This guard always evaluates to true.
+  meterPublicAPI.js:204 - This guard always evaluates to true.
+
+[1] js/automatic-semicolon-insertion (NOTE): Semicolon insertion
+  index.html:167 - Avoid automated semicolon insertion (92% of all statements in [the enclosing script](1) have an explicit semicolon).
+
