@@ -1,0 +1,36 @@
+name: "CodeQL with SARIF Export"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  analyze:
+    name: Analyze (javascript-typescript)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: javascript-typescript
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        output: sarif-results
+        upload: never
+
+    - name: Upload SARIF as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: codeql-js-sarif
+        path: sarif-results/javascript.sarif
+        retention-days: 1
