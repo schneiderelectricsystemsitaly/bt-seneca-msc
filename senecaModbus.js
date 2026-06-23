@@ -247,7 +247,7 @@ function makeMeasureRequest(mode) {
  */
 function parseMeasure(buffer, mode) {
 	var responseFC3 = modbus.parseFC3(buffer);
-	var meas, meas2, min, max;
+	var meas = 0, meas2, min, max;
 
 	// All measures are float
 	if (responseFC3 == null)
@@ -542,7 +542,6 @@ function makeSetpointRequest(mode, setpoint, setpoint2) {
 	default:
 		throw new Error("Not handled");
 	}
-	return [];
 }
 
 /**

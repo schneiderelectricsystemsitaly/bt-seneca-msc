@@ -215,7 +215,7 @@ async function stateMachine() {
 async function processCommand() {
 	try {
 		var command = btState.command;
-		var result = ResultCode.SUCCESS;
+		var result;
 
 		if (command == null) {
 			return;

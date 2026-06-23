@@ -1,6 +1,6 @@
 "use strict";
 
-const testTraces = [
+let testTraces = [
 	{
 		"request": "19 03 00 0a 00 02 e7 d1",
 		"answer": "19 03 04 5f 43 3a 90 93 3e"

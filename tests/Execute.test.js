@@ -43,7 +43,7 @@ describe("Executing commands with simulated device", () => {
 
 	test("JSON Execute works with Command returned", async () => {
 		// Now loop through all possible commands
-		for (ctype in MSC.CommandType) {
+		for (let ctype in MSC.CommandType) {
 			var comm = MSC.Command.CreateTwoSP(MSC.CommandType[ctype], 5.0, 1.2);
 			if (comm.isGeneration() || comm.isMeasurement())
 			{
@@ -68,7 +68,7 @@ describe("Executing commands with simulated device", () => {
 
 
 	test("SimpleExecuteJSON test will all commands", async () => {
-		for (ctype in MSC.CommandType) {
+		for (let ctype in MSC.CommandType) {
 			var comm = MSC.Command.CreateOneSP(MSC.CommandType[ctype], 5.0);
 
 			if (comm.isGeneration() || comm.isMeasurement())

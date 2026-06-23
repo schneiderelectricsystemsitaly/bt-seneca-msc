@@ -164,7 +164,7 @@
         $("#jsonTraces").click(async () => {
             var trace = MSC.GetJsonTraces();
             $("#jsonTestTraces").text(trace);
-        })
+        });
         $("#startBt").click(async () => {
             $("#resultPair").text("Pending...");
             var res = await MSC.Pair(false);
@@ -289,7 +289,7 @@
             $("#serial").text(mstate.deviceSerial);
 
             var description = "";
-            for (x in MSC.CommandType) {
+            for (let x in MSC.CommandType) {
                 if (MSC.CommandType[x] === mstate.deviceMode) {
                     description = x;
                     break;

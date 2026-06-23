@@ -1,0 +1,137 @@
+CodeQL Analysis Report - bt-seneca-msc
+============================================================
+Run date: 2026-06-23
+Query suite: security-and-quality
+Language: javascript-typescript
+Total rules evaluated: 200
+Total findings: 40
+Actionable findings (excluding generated dist/): 24
+
+FILES ANALYZED
+----------------------------------------
+  .github/workflows/publish.yml
+  .github/workflows/codeql.yml
+  .eslintrc.js
+  .eslintrc.json
+  bluetooth.js
+  classes/Command.js
+  classes/APIState.js
+  classes/CommandResult.js
+  classes/MeterState.js
+  classes/SenecaMSC.js
+  constants.js
+  dist/bt-seneca-msc.js
+  index.html
+  jest.config.js
+  meterApi.js
+  meterPublicAPI.js
+  modbusRtu.js
+  modbusTestData.js
+  senecaModbus.js
+  package.json
+  tests/Execute.test.js
+  tests/fakeBluetooth.test.js
+  tests/meterApi.test.js
+  tsconfig.json
+  utils.js
+
+ALL FINDINGS (including dist/)
+----------------------------------------
+[14] js/unused-local-variable (NOTE): Unused variable, import, function or class
+  classes/SenecaMSC.js:18 - Unused variable SET_POWER_OFF.
+  index.html:183 - Unused variable stop.
+  meterApi.js:5 - Unused variable APIState.
+  tests/Execute.test.js:1 - Unused variable MeterState.
+  tests/Execute.test.js:4 - Unused variable log.
+  tests/Execute.test.js:18 - Unused variable CommandType.
+  tests/fakeBluetooth.test.js:4 - Unused variable log.
+  tests/fakeBluetooth.test.js:18 - Unused variable CommandType.
+  senecaModbus.js:8 - Unused variable Command.
+  dist/bt-seneca-msc.js:1 - Unused variable module.
+  dist/bt-seneca-msc.js:1 - Unused variable exports.
+  dist/bt-seneca-msc.js:896 - Unused variable SET_POWER_OFF.
+  dist/bt-seneca-msc.js:1276 - Unused variable APIState.
+  dist/bt-seneca-msc.js:4800 - Unused variable Command.
+
+[12] js/useless-assignment-to-local (WARNING): Useless assignment to local variable
+  bluetooth.js:148 - The value assigned to nextAction here is unused.
+  bluetooth.js:150 - The value assigned to nextAction here is unused.
+  bluetooth.js:171 - The value assigned to nextAction here is unused.
+  bluetooth.js:173 - The value assigned to nextAction here is unused.
+  bluetooth.js:218 - The initial value of result is unused, since it is always overwritten.
+  bluetooth.js:594 - The value assigned to server here is unused.
+  dist/bt-seneca-msc.js:149 - The value assigned to nextAction here is unused.
+  dist/bt-seneca-msc.js:151 - The value assigned to nextAction here is unused.
+  dist/bt-seneca-msc.js:172 - The value assigned to nextAction here is unused.
+  dist/bt-seneca-msc.js:174 - The value assigned to nextAction here is unused.
+  dist/bt-seneca-msc.js:219 - The initial value of result is unused, since it is always overwritten.
+  dist/bt-seneca-msc.js:595 - The value assigned to server here is unused.
+
+[4] js/unneeded-defensive-code (NOTE): Unneeded defensive code
+  meterPublicAPI.js:131 - This guard always evaluates to true.
+  meterPublicAPI.js:204 - This guard always evaluates to true.
+  dist/bt-seneca-msc.js:1430 - This guard always evaluates to true.
+  dist/bt-seneca-msc.js:1503 - This guard always evaluates to true.
+
+[3] js/missing-variable-declaration (WARNING): Missing variable declaration
+  index.html:292 - Variable x is used like a local variable, but is missing a declaration.
+  tests/Execute.test.js:46 - Variable ctype is used like a local variable, but is missing a declaration.
+  tests/Execute.test.js:71 - Variable ctype is used like a local variable, but is missing a declaration.
+
+[2] js/unreachable-statement (WARNING): Unreachable statement
+  senecaModbus.js:545 - This statement is unreachable.
+  dist/bt-seneca-msc.js:5337 - This statement is unreachable.
+
+[2] js/assignment-to-constant (ERROR): Assignment to constant
+  modbusTestData.js:2607 - Assignment to variable testTraces, which is [declared](1) constant.
+  dist/bt-seneca-msc.js:4428 - Assignment to variable testTraces, which is [declared](1) constant.
+
+[2] js/implicit-operand-conversion (WARNING): Implicit operand conversion
+  senecaModbus.js:388 - This expression will be implicitly converted from undefined to number.
+  dist/bt-seneca-msc.js:5180 - This expression will be implicitly converted from undefined to number.
+
+[1] js/automatic-semicolon-insertion (NOTE): Semicolon insertion
+  index.html:167 - Avoid automated semicolon insertion (92% of all statements in [the enclosing script](1) have an explicit semicolon).
+
+ACTIONABLE FINDINGS (source files only, excluding dist/)
+----------------------------------------
+[1] js/assignment-to-constant (ERROR): Assignment to constant
+  modbusTestData.js:2607 - Assignment to variable testTraces, which is [declared](1) constant.
+
+[6] js/useless-assignment-to-local (WARNING): Useless assignment to local variable
+  bluetooth.js:148 - The value assigned to nextAction here is unused.
+  bluetooth.js:150 - The value assigned to nextAction here is unused.
+  bluetooth.js:171 - The value assigned to nextAction here is unused.
+  bluetooth.js:173 - The value assigned to nextAction here is unused.
+  bluetooth.js:218 - The initial value of result is unused, since it is always overwritten.
+  bluetooth.js:594 - The value assigned to server here is unused.
+
+[3] js/missing-variable-declaration (WARNING): Missing variable declaration
+  index.html:292 - Variable x is used like a local variable, but is missing a declaration.
+  tests/Execute.test.js:46 - Variable ctype is used like a local variable, but is missing a declaration.
+  tests/Execute.test.js:71 - Variable ctype is used like a local variable, but is missing a declaration.
+
+[1] js/unreachable-statement (WARNING): Unreachable statement
+  senecaModbus.js:545 - This statement is unreachable.
+
+[1] js/implicit-operand-conversion (WARNING): Implicit operand conversion
+  senecaModbus.js:388 - This expression will be implicitly converted from undefined to number.
+
+[9] js/unused-local-variable (NOTE): Unused variable, import, function or class
+  classes/SenecaMSC.js:18 - Unused variable SET_POWER_OFF.
+  index.html:183 - Unused variable stop.
+  meterApi.js:5 - Unused variable APIState.
+  tests/Execute.test.js:1 - Unused variable MeterState.
+  tests/Execute.test.js:4 - Unused variable log.
+  tests/Execute.test.js:18 - Unused variable CommandType.
+  tests/fakeBluetooth.test.js:4 - Unused variable log.
+  tests/fakeBluetooth.test.js:18 - Unused variable CommandType.
+  senecaModbus.js:8 - Unused variable Command.
+
+[2] js/unneeded-defensive-code (NOTE): Unneeded defensive code
+  meterPublicAPI.js:131 - This guard always evaluates to true.
+  meterPublicAPI.js:204 - This guard always evaluates to true.
+
+[1] js/automatic-semicolon-insertion (NOTE): Semicolon insertion
+  index.html:167 - Avoid automated semicolon insertion (92% of all statements in [the enclosing script](1) have an explicit semicolon).
+
