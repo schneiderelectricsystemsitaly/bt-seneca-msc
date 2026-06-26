@@ -3,30 +3,33 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   release:
     name: npm-publish
     runs-on: ubuntu-latest
-    permissions: 
+    permissions:
       contents: read
-      packages: write 
+      id-token: write
     steps:
     - name: Checkout repository
-      uses: actions/checkout@master
+      uses: actions/checkout@v7
     - name: Set up Node.js
-      uses: actions/setup-node@master
+      uses: actions/setup-node@v6
       with:
-        node-version: 16
+        node-version: 24
         registry-url: https://registry.npmjs.org
     - run: npm ci
     - run: npm run dist # build the minified version
     - run: npm run dev  # build the CommonJS non-minified version
     - run: npm test     # run tests
-    - id: publish
-      uses: JS-DevTools/npm-publish@v1
-      with:
-        token: ${{ secrets.NPM_AUTH_TOKEN }}
-    - if: steps.publish.outputs.type != 'none'
+    - name: Publish to npm
       run: |
-        echo "Version changed: ${{ steps.publish.outputs.old-version }} => ${{ steps.publish.outputs.version }}"
+        VERSION=$(node -p "require('./package.json').version")
+        EXISTS=$(npm view bt-seneca-msc@$VERSION version 2>/dev/null || echo "")
+        if [ -z "$EXISTS" ]; then
+          npm publish --provenance --access public
+        else
+          echo "Version $VERSION already published, skipping."
+        fi

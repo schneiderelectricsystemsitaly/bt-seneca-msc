@@ -5,6 +5,8 @@
 var modbus = require("./modbusRtu");
 var constants = require("./constants");
 var utils = require("./utils");
+const { Command } = require("./meterApi");
+const { btState } = require("./classes/APIState");
 
 var CommandType = constants.CommandType;
 const SENECA_MB_SLAVE_ID = modbus.SENECA_MB_SLAVE_ID; // Modbus RTU slave ID
@@ -119,6 +121,10 @@ function parseCurrentMode(buffer, currentMode) {
 	if (value == null)
 		throw new Error("Unknown meter mode : " + value);
 
+	if (val1 == constants.ContinuityImpl && btState.continuity)
+	{
+		return CommandType.Continuity;
+	}
 	return val1;
 }
 /**
@@ -135,7 +141,14 @@ function makeModeRequest(mode) {
 		return null;
 	}
 
+	btState.continuity = false;
+
 	if (mode > CommandType.NONE_UNKNOWN && mode <= CommandType.OFF) { // Measurements
+		if (mode == CommandType.Continuity)
+		{
+			mode = constants.ContinuityImpl;
+			btState.continuity = true;
+		}
 		return modbus.makeFC16(SENECA_MB_SLAVE_ID, MSCRegisters.CMD, [CHANGE_STATUS, mode]);
 	}
 	else if (mode > CommandType.OFF && mode < CommandType.GEN_RESERVED) { // Generations
@@ -187,6 +200,7 @@ function makeMeasureRequest(mode) {
 	case CommandType.THERMO_S:
 	case CommandType.THERMO_T:
 		return modbus.makeFC3(SENECA_MB_SLAVE_ID, 2, MSCRegisters.TempMeasure);
+	case CommandType.Continuity:
 	case CommandType.Cu50_2W:
 	case CommandType.Cu50_3W:
 	case CommandType.Cu50_4W:
@@ -283,6 +297,17 @@ function parseMeasure(buffer, mode) {
 			"Description": "Temperature",
 			"Value": Math.round(meas * 10) / 10,
 			"Unit": "°C",
+			"SecondaryDescription": "Resistance",
+			"SecondaryValue": Math.round(meas2 * 10) / 10,
+			"SecondaryUnit": "Ohms",
+			"Timestamp": new Date().toISOString()
+		};
+	case CommandType.Continuity:
+		meas2 = modbus.getFloat32LEBS(responseFC3, 4);
+		return {
+			"Description": "Continuity",
+			"Value": (meas2 < constants.ContinuityThresholdOhms) ? 1 : 0,
+			"Unit": "None",
 			"SecondaryDescription": "Resistance",
 			"SecondaryValue": Math.round(meas2 * 10) / 10,
 			"SecondaryUnit": "Ohms",

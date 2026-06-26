@@ -28,6 +28,12 @@ class APIState {
 		this.btService = null;
 		this.btDevice = null;
 
+		// emulated continuity checker
+		this.continuity = false;
+
+		// battery refresh counter for regular battery status updates
+		this.batteryRefreshCounter = 0;
+
 		// general statistics for debugging
 		this.stats = {
 			"requests": 0,
@@ -38,7 +44,7 @@ class APIState {
 			"subcribes": 0,
 			"commands": 0,
 			"responseTime": 0.0,
-			"lastResponseTime": 0.0,
+			"lastResponseTime": "",
 			"last_connect": new Date(2020, 1, 1).toISOString()
 		};
 

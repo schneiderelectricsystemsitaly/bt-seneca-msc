@@ -42,6 +42,7 @@ const CommandType = {
 	PulseTrain: 37, // Conteggio impulsi
 	RESERVED: 38,
 	RESERVED_2: 40,
+	Continuity: 41,
 	OFF: 100, // ********* GENERATION AFTER THIS POINT *****************/
 	GEN_mA_passive: 101,
 	GEN_mA_active: 102,
@@ -77,8 +78,8 @@ const CommandType = {
 	SET_ShutdownDelay: 1006
 };
 
-
-
+const ContinuityImpl = CommandType.Cu50_2W;
+const ContinuityThresholdOhms = 75;
 
 /*
  * Internal state machine descriptions
@@ -106,4 +107,4 @@ const ResultCode = {
 
 const MAX_U_GEN = 27.0; // maximum voltage 
 
-module.exports = {State, CommandType, ResultCode, MAX_U_GEN };
+module.exports = {State, CommandType, ResultCode, MAX_U_GEN, ContinuityImpl, ContinuityThresholdOhms};

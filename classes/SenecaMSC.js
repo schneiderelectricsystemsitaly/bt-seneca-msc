@@ -9,6 +9,7 @@ var utils = require("../utils");
 var senecaMB = require("../senecaModbus");
 var modbus = require("../modbusRtu");
 var constants = require("../constants");
+const { btState } = require("./APIState");
 
 var CommandType = constants.CommandType;
 var ResultCode = constants.ResultCode;
@@ -247,6 +248,9 @@ class SenecaMSC {
 
 		// Some commands require additional command to be given to work properly, after a slight delay
 		switch (command_type) {
+		case CommandType.Continuity:
+			btState.continuity = true;
+			break;
 		case CommandType.V:
 		case CommandType.mV:
 		case CommandType.mA_active:

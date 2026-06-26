@@ -4,3 +4,8 @@ node_modules/
 bt-seneca-msc.code-workspace
 .vscode/
 coverage/
+/dist
+bt-iotesting.code-workspace
+/js
+
+.claude/settings.local.json
