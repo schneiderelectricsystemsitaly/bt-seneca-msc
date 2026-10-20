@@ -1,6 +1,7 @@
 .vs/
 *.bak
 node_modules/
+*.tgz
 bt-seneca-msc.code-workspace
 .vscode/
 coverage/
